@@ -1,0 +1,397 @@
+% mammalian endocytosis
+% Matt Akamatsu, Drubin lab 2017
+
+
+set simul internalize.cym
+{
+    
+    % time step needs to be small for branching to work properly (explicit solvation of the Fork class)
+
+    time_step = 0.00005
+
+
+    % viscosity in pN.s/um^2 = Pa.s. Water is ~0.001. 
+    % yeast cytoplasm or mammalian egg oocyte was estimated to be ~1.
+    % On the other hand it could be as low as 0.0196, in cerevisiae and HeLa (Liam Holt)
+
+    viscosity = 1 
+    % toggle steric
+     steric = 1
+}
+
+%% space including 'extracellular' space to fit endocytic bud
+
+set space cell
+{
+    geometry = ( strip 0.5 0.5 0.5)
+    
+}
+
+new space cell
+
+%% space demarcating the plasma membrane. this is the boundary for
+% proteins and the resting point of endocytic bud
+
+set space insidecell
+
+{
+	geometry = (strip 0.5 0.5 0.4 ) 
+    
+    display = {visible=1; color=white}
+
+}
+new space insidecell
+
+%% to visually separate inside from outside cell
+
+set space membraneMarker
+{
+    geometry = (square 0.4 0.4 0.4)
+    display = {visible=1; color=black}
+
+}
+
+new space membraneMarker
+
+
+set fiber actin
+{
+    rigidity = 0.041 % which is a persistence length of 10 µm. see mccullough de la cruz 2008
+    segmentation = 0.01
+
+    % unclear how strong to set the confinement for mammalian cells.
+
+    confine = inside, 10000, insidecell
+    
+    % the 'classic' activity is for microtubules, with growth and "catastrophe" at plus end.
+    % here we take advantage of the stochastic nature of catstrophe to define capping as
+    % an irreversible catastrophe wih no shrinking.
+
+    activity        = classic
+
+    % 182 subunits per second is 0.5 micron per second 
+    % this is a conservative estimate for ~20 µM available actin monomers
+
+    growing_speed   =   0.5
+
+    % actin does not shrink
+
+    shrinking_speed =    0
+
+    % catastrophe rate is the capping rate for actin.
+
+    % Given a growing speed 0.5, this makes avg 150nm filaments. determined with deterministic plots of exponentially distributed filament lengths.
+    % the second term sets the force AND speed-dependent catastrophe (or capping) rate.  h 
+    % for capping it doesn't make sense for it to depend on speed so keep this second term at 0 for now.
+
+    catastrophe_rate = 6.3, 0 
+  
+    % stall force for actin filament growth, scaled by an exponetial, in pN. 
+    % realistic values are between 1 and 9 pN depending on actin concentration.
+
+    growing_force   =     5
+
+    display = {line = 5, 1; point = 1; end_style = 5; rainbow = 0.01}
+
+    % binding_key = 3
+    % binding_key = (3) 
+    % according to binary, 3 should bind 1 AND 2. 
+    % currently there is only one type of fiber so this is not needed.
+
+    steric = 1
+    steric_radius = 0.008
+    
+}
+
+%% this is for arp2/3 complex
+
+set hand binder
+{
+    %Beltzner 2008: kon = 0.00015/uM/s.  Conversion assuming 100 nm filaments. 
+    binding_rate = 08  
+    binding_range = 0.01 
+    unbinding_rate = 0.0034 % Beltzner 2008: GST-VCA + Arp2/3 from filament
+
+    % should I set a high unbinding force or turn off force-dependent change in unbinding rate?
+    % unbinding_force = 10
+    display = { size = 0; color=orange }
+    binding_key = 3 
+
+    % binding_key = (3) 
+    % according to binary, 3 should bind 1 AND 2. 
+    % currently there is only one type of fiber so this is not needed. 
+}
+
+%% the nucleation module of arp2/3 complex. 
+
+set hand boundNucleator
+{
+ 
+    activity = nucleate
+    binding_rate = 0
+    % nucleate at 1 per second. because there is no unbinding this only happens once per arp2/3.
+    nucleate = 1, actin, (fiber_length=0.005;  end_state=1)
+    display = { size=8; color=blue; }
+
+}
+% set hand ABD1
+% {
+%     binding_rate = 2.5 %s-1
+%     binding_range = 0.016 % nm, what should it be . 2x the width? nt sure how this is calculated.
+%     unbinding_rate = 0.043 % s-1. set to be 350 nM
+%     display = {size = 5; color = green}
+%     binding_key = 1
+% }
+
+% set hand ABD2
+% {
+%     binding_rate = 2.5 %s-1
+%     binding_range = 0.016 % nm, what should it be
+%     unbinding_rate = 0.043 % s-1. set to be 350 nM
+%     display = {size = 5; color = green}
+%     binding_key = 1
+% }
+
+% set couple fimbrin
+% {
+
+%      activity = bridge
+%     confine = inside, 100, insidecell
+
+%      % specificity = parallel
+%      hand1 = ABD1 % since ABD2 seems to be important for ABD1 binding
+%      hand2 = ABD2
+%      stiffness = 1000
+%      stiff = 1
+%      length = 0.009 % um
+%      diffusion = 1
+%      confine = inside, 100 
+%      % trans_activated = 1;
+%      % diffusion = ;
+
+%% hip1R. I estimated Kd to be 400nM. to actin. <1 nM to clathrin. so we assume that hip1R stays attached to 
+% the endocytic bud. 
+
+set hand strongbinder
+{
+    binding_rate = 10
+    binding_range = 0.006
+    unbinding_rate = 4
+    % unbinding_force = 1 % don't know physiological range for this
+    display = { size = 10; color=purple }
+    binding_key = 1
+}
+
+%% the linear actin filament nucleators to serve as mother filaments for arp2/3 complex
+
+set hand nucleator
+{
+ 
+    activity = nucleate
+    binding_rate = 0
+    nucleate = 10, actin, (fiber_length=0.005;  end_state=1)
+    display = { size=8; color=salmon; }
+
+}
+
+ set couple arp2
+
+ {
+     %% this is a special class that Francois Nedelec wrote. 
+     % it makes a couple with a preferred angle between the two bound fibers (with a defined flexibility).
+     % importantly, it is only solved explicitly not implicitly, so the time step needs to be very small.
+
+     activity = fork
+
+     % angle = 1.22 % 70 degrees
+     angle = 1.344 % 77 degrees (bovine arp2/3, blanchoin 2000)
+
+     % branch junction stiffness
+     angular_stiffness = 0.076; % in pN.micron / rad. blanchoin pollard measured in 2D as 0.076 pN.um / rad^2. 
+     
+     hand1 = binder 
+     hand2 = boundNucleator
+
+    % restrict unbound arp2/3 to surface (base)
+
+     confine = surface, , insidecell
+
+     % models arp23 as mostly stationary on the membrane until it binds a fiber
+     diffusion  = .0001
+    
+     % important: stipulates that arp2/3 needs to bind an actin filament before nucleating a new branched actin filament.
+     trans_activated = 1;
+     
+     % not sure what to set this as. Don't want the arp2/3 being stretched unphysiologically. 
+     stiffness= 100000
+
+ }
+
+set single hip1r
+{
+    hand = strongbinder
+    % not sure what to set this as. Don't want the hip1R being stretched away from the coat unphysiologically. 
+    stiffness = 1000000
+   
+}
+
+set single mother_filament_maker
+{
+    hand = nucleator
+    
+}
+
+set solid bud
+{
+
+% confine = surface, [spring stiffness], insidecell
+% to compare with Hassinger 2017: 
+% 2 low, 20 phyiol , 200 high
+
+    %% I made "first_surface" property
+    % which only confines "point0" to the surface. 
+    % in units of pN per micron.
+
+    confine = first_surface, 150, insidecell
+
+    steric = 1
+    % what should this be? is it being set separately?
+    viscosity = 15
+    display = ( style=6; coloring=2; visible=1; )
+}
+new 1 solid bud 
+
+{
+    nb_points = 72
+    %% set each point as (position X position y position Z, radius, thing_attached)
+    % to make a point, radius can be set to nothing.
+    % I wrote a script to generate this given a desired radius coverage and 
+    % number of points: sphericalcoordinategenerator.m
+    	
+ point0 = 0 0 0, 0.045000 
+point1 = -0.001014 0.044565 0.006160, , hip1r 
+point2 = 0 0 -0.034, , 0.03
+point3 = 0 0 -0.036, , 0.03
+point4 = 0 0 -0.038, , 0.03
+point5 = 0 0 -0.04, , 0.03
+point6 = 0 0 -0.042, , 0.03
+point7 = 0 0 -0.044, , 0.03
+point8 = 0 0 -0.046, , 0.03
+point9 = 0 0 -0.048, , 0.03
+point10 = 0 0 -0.05, , 0.03
+point11 = 0 0 -0.052, , 0.03
+point12 = 0 0 -0.054, , 0.03
+point13 = 0 0 -0.056, , 0.03
+point14 = 0 0 -0.058, , 0.03
+point15 = 0 0 -0.06, , 0.03
+point16 = 0 0 -0.062, , 0.03
+point17 = 0 0 -0.064, , 0.03
+point18 = 0 0 -0.066, , 0.03
+point19 = 0 0 -0.068, , 0.03
+point20 = 0 0 -0.07, , 0.03
+point21 = 0 0 -0.072, , 0.03
+point22 = 0 0 -0.074, , 0.03
+point23 = 0 0 -0.076, , 0.03
+point24 = 0 0 -0.078, , 0.03
+point25 = 0 0 -0.08, , 0.03
+point26 = 0 0 -0.082, , 0.03
+point27 = 0 0 -0.084, , 0.03
+point28 = 0 0 -0.086, , 0.03
+point29 = 0 0 -0.088, , 0.03
+point30 = 0 0 -0.09, , 0.03
+point31 = 0 0 -0.092, , 0.03
+point32 = 0 0 -0.094, , 0.03
+point33 = 0 0 -0.096, , 0.03
+point34 = 0 0 -0.098, , 0.03
+point35 = 0 0 -0.1, , 0.03
+point36 = 0 0 -0.102, , 0.03
+point37 = 0 0 -0.104, , 0.03
+point38 = 0 0 -0.106, , 0.03
+point39 = 0 0 -0.108, , 0.03
+point40 = 0 0 -0.11, , 0.03
+point41 = 0 0 -0.112, , 0.03
+point42 = 0 0 -0.114, , 0.03
+point43 = 0 0 -0.116, , 0.03
+point44 = 0 0 -0.118, , 0.03
+point45 = 0 0 -0.12, , 0.03
+point46 = 0 0 -0.122, , 0.03
+point47 = 0 0 -0.124, , 0.03
+point48 = 0 0 -0.126, , 0.03
+point49 = 0 0 -0.128, , 0.03
+point50 = 0 0 -0.13, , 0.03
+point51 = 0 0 -0.132, , 0.03
+point52 = 0 0 -0.134, , 0.03
+point53 = 0 0 -0.136, , 0.03
+point54 = 0 0 -0.138, , 0.03
+point55 = 0 0 -0.14, , 0.03
+point56 = 0 0 -0.142, , 0.03
+point57 = 0 0 -0.144, , 0.03
+point58 = 0 0 -0.146, , 0.03
+point59 = 0 0 -0.148, , 0.03
+point60 = 0 0 -0.15, , 0.03
+point61 = 0 0 -0.152, , 0.03
+point62 = 0 0 -0.154, , 0.03
+point63 = 0 0 -0.156, , 0.03
+point64 = 0 0 -0.158, , 0.03
+point65 = 0 0 -0.16, , 0.03
+point66 = 0 0 -0.162, , 0.03
+point67 = 0 0 -0.164, , 0.03
+point68 = 0 0 -0.166, , 0.03
+point69 = 0 0 -0.168, , 0.03
+point70 = 0 0 -0.17, , 0.03
+point71 = 0 0 -0.19, , 0.05
+
+
+    % upright
+    orientation = none
+
+    % offset a tiny bit so that the confinement does not make a solving error
+    position = 0 0 -0.399     
+
+    
+}
+
+
+
+new 0	 fiber actin
+{
+
+    length = 1
+    end_state = 1, 4
+    position = 0 0 -0.05
+
+}
+
+
+new 30 single mother_filament_maker
+{
+
+   position = disc  0.12 0 at 0 0 -0.399
+
+}
+
+
+new 200 couple arp2
+{
+   
+    position = circle 0.0825 0.075 at 0 0 -0.399
+    
+}
+
+% for 1 micron cubed volume, should be 5 micromolar
+
+% new 3010 couple fimbrin
+% {
+
+% }
+
+
+
+
+run simul *
+{   
+    nb_frames = 150
+    nb_steps = 300000 % 15 s
+    % nb_steps = 100000 % 5 s
+
+}

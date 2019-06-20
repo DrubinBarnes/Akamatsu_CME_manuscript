@@ -1,0 +1,108 @@
+% Cytosim property file
+
+set simul 0 internalize.cym
+{
+ time_step      = 5e-05;
+ random_seed    = 1091993031;
+ steric         = 1, 100, 100;
+}
+
+set space 0 cell
+{
+ geometry       = strip 0.5 0.5 0.5;
+ shape          = strip;
+ dimensions     = 0.5 0.5 0.5;
+}
+
+set space 1 insidecell
+{
+ geometry       = strip 0.5 0.5 0.4;
+ shape          = strip;
+ dimensions     = 0.5 0.5 0.4;
+ display        = (visible=1; color=white);
+}
+
+set space 2 membraneMarker
+{
+ geometry       = square 0.4 0.4 0.4;
+ shape          = square;
+ dimensions     = 0.4 0.4 0.4;
+ display        = (visible=1; color=black);
+}
+
+set fiber 0 actin
+{
+ viscosity      = 1;
+ rigidity       = 0.041;
+ segmentation   = 0.01;
+ confine        = 1, 10000, insidecell;
+ steric         = 1, 0.008, 0;
+ activity       = classic;
+ display        = (line = 5, 1; point = 1; end_style = 5; rainbow = 0.01);
+ growing_speed  = 0.5, 0;
+ growing_force  = 5;
+ catastrophe_rate = 4, 4;
+}
+
+set hand 0 binder
+{
+ binding        = 8, 0.01;
+ binding_key    = 3;
+ unbinding      = 0.0034, 0;
+ display        = (size = 0; color=orange);
+}
+
+set hand 1 boundNucleator
+{
+ display        = (size=8; color=blue;);
+ activity       = nucleate;
+ nucleate       = 1, actin, (fiber_length=0.005;  end_state=1);
+}
+
+set hand 2 strongbinder
+{
+ binding        = 10, 0.006;
+ binding_key    = 1;
+ unbinding      = 4, 0;
+ display        = (size = 10; color=purple);
+}
+
+set hand 3 nucleator
+{
+ display        = (size=8; color=salmon;);
+ activity       = nucleate;
+ nucleate       = 10, actin, (fiber_length=0.005;  end_state=1);
+}
+
+set couple 0 arp2
+{
+ hand1          = binder;
+ hand2          = boundNucleator;
+ stiffness      = 100000;
+ diffusion      = 0.0001;
+ confine        = 3, 0, insidecell;
+ activity       = fork;
+ trans_activated = 1;
+ torque         = 0.076, 1.344;
+}
+
+set single 0 hip1r
+{
+ hand           = strongbinder;
+ stiffness      = 1e+06;
+}
+
+set single 1 mother_filament_maker
+{
+ hand           = nucleator;
+}
+
+set bead 0 bud
+{
+ viscosity      = 15;
+ steric         = 1;
+ confine        = 6, 150, insidecell;
+ display        = (style=6; coloring=2; visible=1;);
+}
+
+

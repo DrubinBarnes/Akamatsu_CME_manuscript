@@ -1,0 +1,221 @@
+CYTOSIM started Mon Jan 28 19:07:35 2019
+============================== RUNNING ================================
+warning: fiber:catastrophe_rate is independent of force (catastrophe_rate[1] unspecified)
+auto setting simul:steric_max_range=0.100
+warning: fiber:catastrophe_rate is independent of force (catastrophe_rate[0] == catastrophe_rate[1])
+warning: hand `binder' overcomes high energy when binding:
+        | stiffness * binding_range^2 = 2380.95 kT
+warning: hand `strongbinder' overcomes high energy when binding:
+        | stiffness * binding_range^2 = 8571.43 kT
+Mon Jan 28 19:21:38 2019
+F1          0.10s  -  CPU   842180ms,        842s
+F2          0.20s  -  CPU   849880ms,       1692s
+F3          0.30s  -  CPU   850330ms,       2542s
+Mon Jan 28 20:04:36 2019
+F4          0.40s  -  CPU   874220ms,       3417s
+F5          0.50s  -  CPU   904210ms,       4321s
+F6          0.60s  -  CPU   906380ms,       5227s
+F7          0.70s  -  CPU   919740ms,       6147s
+Mon Jan 28 21:05:51 2019
+F8          0.80s  -  CPU   936200ms,       7083s
+F9          0.90s  -  CPU   946950ms,       8030s
+F10         1.00s  -  CPU   957380ms,       8987s
+F11         1.10s  -  CPU   960970ms,       9948s
+Mon Jan 28 22:09:57 2019
+F12         1.20s  -  CPU   970450ms,      10919s
+F13         1.30s  -  CPU   971720ms,      11891s
+F14         1.40s  -  CPU   986280ms,      12877s
+F15         1.50s  -  CPU   996650ms,      13874s
+Mon Jan 28 23:16:09 2019
+F16         1.60s  -  CPU  1002660ms,      14876s
+F17         1.70s  -  CPU  1007270ms,      15883s
+F18         1.80s  -  CPU  1018620ms,      16902s
+Tue Jan 29 00:07:06 2019
+F19         1.90s  -  CPU  1021040ms,      17923s
+F20         2.00s  -  CPU  1023020ms,      18946s
+F21         2.10s  -  CPU  1025510ms,      19972s
+F22         2.20s  -  CPU  1029320ms,      21001s
+Tue Jan 29 01:15:54 2019
+F23         2.30s  -  CPU  1037260ms,      22038s
+F24         2.40s  -  CPU  1047600ms,      23086s
+F25         2.50s  -  CPU  1054060ms,      24140s
+Tue Jan 29 02:08:55 2019
+F26         2.60s  -  CPU  1068110ms,      25208s
+F27         2.70s  -  CPU  1088500ms,      26297s
+F28         2.80s  -  CPU  1099560ms,      27396s
+Tue Jan 29 03:03:48 2019
+F29         2.90s  -  CPU  1096480ms,      28493s
+F30         3.00s  -  CPU  1104230ms,      29597s
+F31         3.10s  -  CPU  1114090ms,      30711s
+F32         3.20s  -  CPU  1121490ms,      31832s
+Tue Jan 29 04:18:38 2019
+F33         3.30s  -  CPU  1136740ms,      32969s
+F34         3.40s  -  CPU  1142480ms,      34112s
+F35         3.50s  -  CPU  1148440ms,      35260s
+Tue Jan 29 05:16:18 2019
+F36         3.60s  -  CPU  1158340ms,      36418s
+F37         3.70s  -  CPU  1168420ms,      37587s
+F38         3.80s  -  CPU  1179330ms,      38766s
+Tue Jan 29 06:15:19 2019
+F39         3.90s  -  CPU  1183290ms,      39949s
+F40         4.00s  -  CPU  1203000ms,      41152s
+F41         4.10s  -  CPU  1221860ms,      42374s
+Tue Jan 29 07:16:23 2019
+F42         4.20s  -  CPU  1232400ms,      43607s
+F43         4.30s  -  CPU  1247100ms,      44854s
+F44         4.40s  -  CPU  1266370ms,      46120s
+Tue Jan 29 08:19:39 2019
+F45         4.50s  -  CPU  1275420ms,      47396s
+F46         4.60s  -  CPU  1290690ms,      48686s
+Tue Jan 29 09:03:08 2019
+F47         4.70s  -  CPU  1308660ms,      49995s
+F48         4.80s  -  CPU  1325930ms,      51321s
+F49         4.90s  -  CPU  1345490ms,      52666s
+Tue Jan 29 10:10:19 2019
+F50         5.00s  -  CPU  1350920ms,      54017s
+F51         5.10s  -  CPU  1362830ms,      55380s
+F52         5.20s  -  CPU  1374780ms,      56755s
+Tue Jan 29 11:19:26 2019
+F53         5.30s  -  CPU  1395920ms,      58151s
+F54         5.40s  -  CPU  1405920ms,      59557s
+Tue Jan 29 12:06:31 2019
+F55         5.50s  -  CPU  1413380ms,      60970s
+F56         5.60s  -  CPU  1433010ms,      62403s
+F57         5.70s  -  CPU  1452740ms,      63856s
+Tue Jan 29 13:19:20 2019
+F58         5.80s  -  CPU  1473160ms,      65329s
+F59         5.90s  -  CPU  1459950ms,      66789s
+Tue Jan 29 14:07:58 2019
+F60         6.00s  -  CPU  1451920ms,      68241s
+F61         6.10s  -  CPU  1449420ms,      69690s
+F62         6.20s  -  CPU  1452380ms,      71143s
+Tue Jan 29 15:20:56 2019
+F63         6.30s  -  CPU  1465420ms,      72608s
+F64         6.40s  -  CPU  1467140ms,      74075s
+Tue Jan 29 16:10:07 2019
+F65         6.50s  -  CPU  1475590ms,      75551s
+F66         6.60s  -  CPU  1484840ms,      77036s
+F67         6.70s  -  CPU  1496450ms,      78532s
+Tue Jan 29 17:25:04 2019
+F68         6.80s  -  CPU  1504360ms,      80036s
+F69         6.90s  -  CPU  1531150ms,      81568s
+Tue Jan 29 18:16:21 2019
+F70         7.00s  -  CPU  1538460ms,      83106s
+F71         7.10s  -  CPU  1538100ms,      84644s
+Tue Jan 29 19:07:47 2019
+F72         7.20s  -  CPU  1541950ms,      86186s
+F73         7.30s  -  CPU  1545650ms,      87732s
+F74         7.40s  -  CPU  1543400ms,      89275s
+Tue Jan 29 20:25:16 2019
+F75         7.50s  -  CPU  1542000ms,      90817s
+F76         7.60s  -  CPU  1544610ms,      92362s
+Tue Jan 29 21:16:56 2019
+F77         7.70s  -  CPU  1545520ms,      93907s
+F78         7.80s  -  CPU  1542430ms,      95450s
+Tue Jan 29 22:08:36 2019
+F79         7.90s  -  CPU  1551730ms,      97001s
+F80         8.00s  -  CPU  1573860ms,      98575s
+Tue Jan 29 23:00:50 2019
+F81         8.10s  -  CPU  1548910ms,     100124s
+F82         8.20s  -  CPU  1540770ms,     101665s
+F83         8.30s  -  CPU  1546800ms,     103212s
+Wed Jan 30 00:18:32 2019
+F84         8.40s  -  CPU  1562960ms,     104775s
+F85         8.50s  -  CPU  1558670ms,     106333s
+Wed Jan 30 01:10:45 2019
+F86         8.60s  -  CPU  1561620ms,     107895s
+F87         8.70s  -  CPU  1566550ms,     109462s
+Wed Jan 30 02:03:15 2019
+F88         8.80s  -  CPU  1577830ms,     111039s
+F89         8.90s  -  CPU  1582830ms,     112622s
+F90         9.00s  -  CPU  1587780ms,     114210s
+Wed Jan 30 03:22:59 2019
+F91         9.10s  -  CPU  1599030ms,     115809s
+F92         9.20s  -  CPU  1594130ms,     117403s
+Wed Jan 30 04:16:27 2019
+F93         9.30s  -  CPU  1599700ms,     119003s
+F94         9.40s  -  CPU  1607050ms,     120610s
+Wed Jan 30 05:10:15 2019
+F95         9.50s  -  CPU  1608920ms,     122219s
+F96         9.60s  -  CPU  1626480ms,     123845s
+Wed Jan 30 06:04:36 2019
+F97         9.70s  -  CPU  1621770ms,     125467s
+F98         9.80s  -  CPU  1614650ms,     127082s
+F99         9.90s  -  CPU  1619740ms,     128702s
+Wed Jan 30 07:25:35 2019
+F100       10.00s  -  CPU  1606020ms,     130308s
+F101       10.10s  -  CPU  1595900ms,     131903s
+Wed Jan 30 08:19:05 2019
+F102       10.20s  -  CPU  1601610ms,     133505s
+F103       10.30s  -  CPU  1611850ms,     135117s
+Wed Jan 30 09:13:04 2019
+F104       10.40s  -  CPU  1615300ms,     136732s
+F105       10.50s  -  CPU  1601610ms,     138334s
+Wed Jan 30 10:06:47 2019
+F106       10.60s  -  CPU  1608810ms,     139943s
+F107       10.70s  -  CPU  1648990ms,     141592s
+Wed Jan 30 11:01:24 2019
+F108       10.80s  -  CPU  1618720ms,     143210s
+F109       10.90s  -  CPU  1620450ms,     144831s
+F110       11.00s  -  CPU  1621790ms,     146453s
+Wed Jan 30 12:22:33 2019
+F111       11.10s  -  CPU  1614800ms,     148067s
+F112       11.20s  -  CPU  1615460ms,     149683s
+Wed Jan 30 13:16:35 2019
+F113       11.30s  -  CPU  1618670ms,     151301s
+F114       11.40s  -  CPU  1616360ms,     152918s
+Wed Jan 30 14:10:51 2019
+F115       11.50s  -  CPU  1632300ms,     154550s
+F116       11.60s  -  CPU  1630910ms,     156181s
+Wed Jan 30 15:05:19 2019
+F117       11.70s  -  CPU  1630930ms,     157812s
+F118       11.80s  -  CPU  1624350ms,     159436s
+F119       11.90s  -  CPU  1635950ms,     161072s
+Wed Jan 30 16:27:20 2019
+F120       12.00s  -  CPU  1648870ms,     162721s
+F121       12.10s  -  CPU  1642150ms,     164363s
+Wed Jan 30 17:22:11 2019
+F122       12.20s  -  CPU  1634710ms,     165998s
+F123       12.30s  -  CPU  1640420ms,     167638s
+Wed Jan 30 18:17:07 2019
+F124       12.40s  -  CPU  1645420ms,     169284s
+F125       12.50s  -  CPU  1658220ms,     170942s
+Wed Jan 30 19:12:27 2019
+F126       12.60s  -  CPU  1647650ms,     172590s
+F127       12.70s  -  CPU  1638320ms,     174228s
+Wed Jan 30 20:07:28 2019
+F128       12.80s  -  CPU  1649420ms,     175877s
+F129       12.90s  -  CPU  1639310ms,     177517s
+Wed Jan 30 21:02:17 2019
+F130       13.00s  -  CPU  1638230ms,     179155s
+F131       13.10s  -  CPU  1637870ms,     180793s
+F132       13.20s  -  CPU  1649220ms,     182442s
+Wed Jan 30 22:24:56 2019
+F133       13.30s  -  CPU  1657420ms,     184100s
+F134       13.40s  -  CPU  1649400ms,     185749s
+Wed Jan 30 23:20:09 2019
+F135       13.50s  -  CPU  1655770ms,     187405s
+F136       13.60s  -  CPU  1679780ms,     189084s
+Thu Jan 31 00:16:34 2019
+F137       13.70s  -  CPU  1703150ms,     190788s
+F138       13.80s  -  CPU  1688340ms,     192476s
+Thu Jan 31 01:11:58 2019
+F139       13.90s  -  CPU  1634710ms,     194111s
+F140       14.00s  -  CPU  1628510ms,     195739s
+Thu Jan 31 02:06:25 2019
+F141       14.10s  -  CPU  1637800ms,     197377s
+F142       14.20s  -  CPU  1642100ms,     199019s
+Thu Jan 31 03:01:13 2019
+F143       14.30s  -  CPU  1644290ms,     200663s
+F144       14.40s  -  CPU  1639450ms,     202303s
+F145       14.50s  -  CPU  1644590ms,     203947s
+Thu Jan 31 04:23:14 2019
+F146       14.60s  -  CPU  1636250ms,     205584s
+F147       14.70s  -  CPU  1643180ms,     207227s
+Thu Jan 31 05:18:13 2019
+F148       14.80s  -  CPU  1655040ms,     208882s
+F149       14.90s  -  CPU  1657580ms,     210539s
+Thu Jan 31 06:13:20 2019
+F150       15.00s  -  CPU  1648970ms,     212188s
+Thu Jan 31 06:13:20 2019
+end

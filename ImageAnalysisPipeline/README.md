@@ -1,0 +1,5 @@
+# CME Analysis and Tracking
+
+This collection of programs is used to track spots in 2D and extract information about their lifetimes, trajectories, and intensities over time. It uses cmeAnalysis, which is derived from b5-track, a tracking package developed by Khuloud Jaqaman and adapted for endocytosis by Francois Aguet. These programs are contained in the cmePackage folder and can be run using the runCMEanalysis script. See cmeAnlaysis tracker general workflow.docx for this part of the tracking.
+
+The track_extraction folder converts the output of cmeAnalysis into a format that can be used by the third segment of the analysis workflow, which is in the association_cleaning_plotting folder. See Sun analysis program general workflow.docx. These were written by Sun Hong, Matt Akamatsu, Julian Hassinger, and Casey Drubin.

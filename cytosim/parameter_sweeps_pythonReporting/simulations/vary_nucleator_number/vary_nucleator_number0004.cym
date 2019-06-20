@@ -1,0 +1,604 @@
+% mammalian endocytosis
+% Matt Akamatsu, Drubin lab 2017 
+
+% vary nucleator number
+ 
+
+
+
+set simul internalize.cym
+{
+    
+    % time step needs to be small for branching to work properly (explicit solvation of the Fork class)
+
+    time_step = 0.00005
+
+
+    % viscosity in pN.s/um^2 = Pa.s. Water is ~0.001. 
+    % yeast cytoplasm or mammalian egg oocyte was estimated to be ~1.
+    % On the other hand it could be as low as 0.0196, in cerevisiae and HeLa (Liam Holt)
+
+    viscosity = 1 
+    % toggle steric
+     steric = 1
+}
+
+%% space including 'extracellular' space to fit endocytic bud
+
+set space cell
+{
+    geometry = ( strip 0.5 0.5 0.5)
+    
+}
+
+new space cell
+
+%% space demarcating the plasma membrane. this is the boundary for
+% proteins and the resting point of endocytic bud
+
+set space insidecell
+
+{
+	geometry = (strip 0.5 0.5 0.4 ) 
+    
+    display = {visible=1; color=white}
+
+}
+new space insidecell
+
+%% to visually separate inside from outside cell
+
+set space membraneMarker
+{
+    geometry = (square 0.4 0.4 0.4)
+    display = {visible=1; color=black}
+
+}
+
+new space membraneMarker
+
+
+set fiber actin
+{
+    rigidity = 0.041 % which is a persistence length of 10 µm. see mccullough de la cruz 2008
+    segmentation = 0.01
+
+    % unclear how strong to set the confinement for mammalian cells.
+
+    confine = inside, 10000, insidecell
+    
+    % the 'classic' activity is for microtubules, with growth and "catastrophe" at plus end.
+    % here we take advantage of the stochastic nature of catstrophe to define capping as
+    % an irreversible catastrophe wih no shrinking.
+
+    activity        = classic
+
+    % 182 subunits per second is 0.5 micron per second 
+    % this is a conservative estimate for ~20 µM available actin monomers
+
+    growing_speed   =   0.5
+
+    % actin does not shrink
+
+    shrinking_speed =    0
+
+    % catastrophe rate is the capping rate for actin.
+
+    % Given a growing speed 0.5, this makes avg 150nm filaments. determined with deterministic plots of exponentially distributed filament lengths.
+    % the second term sets the force AND speed-dependent catastrophe (or capping) rate.  h 
+    % for capping it doesn't make sense for it to depend on speed so keep this second term at 0 for now.
+
+    catastrophe_rate = 6.3, 0 
+  
+    % stall force for actin filament growth, scaled by an exponetial, in pN. 
+    % realistic values are between 1 and 9 pN depending on actin concentration.
+
+    growing_force   =     5
+
+    display = {line = 5, 1; point = 1; end_style = 5; rainbow = 0.01}
+
+    % binding_key = 3
+    % binding_key = (3) 
+    % according to binary, 3 should bind 1 AND 2. 
+    % currently there is only one type of fiber so this is not needed.
+
+    steric = 1
+    steric_radius = 0.008
+    
+}
+
+%% this is for arp2/3 complex
+
+set hand binder
+{
+    %Beltzner 2008: kon = 0.00015/uM/s.  Conversion assuming 100 nm filaments. 
+    binding_rate = 08  
+    binding_range = 0.01 
+    unbinding_rate = 0.0034 % Beltzner 2008: GST-VCA + Arp2/3 from filament
+
+    % should I set a high unbinding force or turn off force-dependent change in unbinding rate?
+    % unbinding_force = 10
+    display = { size = 0; color=orange }
+    binding_key = 3 
+
+    % binding_key = (3) 
+    % according to binary, 3 should bind 1 AND 2. 
+    % currently there is only one type of fiber so this is not needed. 
+}
+
+%% the nucleation module of arp2/3 complex. 
+
+set hand boundNucleator
+{
+ 
+    activity = nucleate
+    binding_rate = 0
+    % nucleate at 1 per second. because there is no unbinding this only happens once per arp2/3.
+    nucleate = 1, actin, (fiber_length=0.005;  end_state=1)
+    display = { size=8; color=blue; }
+
+}
+% set hand ABD1
+% {
+%     binding_rate = 2.5 %s-1
+%     binding_range = 0.016 % nm, what should it be . 2x the width? nt sure how this is calculated.
+%     unbinding_rate = 0.043 % s-1. set to be 350 nM
+%     display = {size = 5; color = green}
+%     binding_key = 1
+% }
+
+% set hand ABD2
+% {
+%     binding_rate = 2.5 %s-1
+%     binding_range = 0.016 % nm, what should it be
+%     unbinding_rate = 0.043 % s-1. set to be 350 nM
+%     display = {size = 5; color = green}
+%     binding_key = 1
+% }
+
+% set couple fimbrin
+% {
+
+%      activity = bridge
+%     confine = inside, 100, insidecell
+
+%      % specificity = parallel
+%      hand1 = ABD1 % since ABD2 seems to be important for ABD1 binding
+%      hand2 = ABD2
+%      stiffness = 1000
+%      stiff = 1
+%      length = 0.009 % um
+%      diffusion = 1
+%      confine = inside, 100 
+%      % trans_activated = 1;
+%      % diffusion = ;
+
+%% hip1R. I estimated Kd to be 400nM. to actin. <1 nM to clathrin. so we assume that hip1R stays attached to 
+% the endocytic bud. 
+
+set hand strongbinder
+{
+    binding_rate = 10
+    binding_range = 0.006
+    unbinding_rate = 4
+    % unbinding_force = 1 % don't know physiological range for this
+    display = { size = 10; color=purple }
+    binding_key = 1
+}
+
+%% the linear actin filament nucleators to serve as mother filaments for arp2/3 complex
+
+set hand nucleator
+{
+ 
+    activity = nucleate
+    binding_rate = 0
+    nucleate = 1, actin, (fiber_length=0.005;  end_state=1)
+    display = { size=8; color=salmon; }
+
+}
+
+ set couple arp2
+
+ {
+     %% this is a special class that Francois Nedelec wrote. 
+     % it makes a couple with a preferred angle between the two bound fibers (with a defined flexibility).
+     % importantly, it is only solved explicitly not implicitly, so the time step needs to be very small.
+
+     activity = fork
+
+     % angle = 1.22 % 70 degrees
+     angle = 1.344 % 77 degrees (bovine arp2/3, blanchoin 2000)
+
+     % branch junction stiffness
+     angular_stiffness = 0.076; % in pN.micron / rad. blanchoin pollard measured in 2D as 0.076 pN.um / rad^2. 
+     
+     hand1 = binder 
+     hand2 = boundNucleator
+
+    % restrict unbound arp2/3 to surface (base)
+
+     confine = surface, , insidecell
+
+     % models arp23 as mostly stationary on the membrane until it binds a fiber
+     diffusion  = .0001
+    
+     % important: stipulates that arp2/3 needs to bind an actin filament before nucleating a new branched actin filament.
+     trans_activated = 1;
+     
+     % not sure what to set this as. Don't want the arp2/3 being stretched unphysiologically. 
+     stiffness= 100000
+
+ }
+
+set single hip1r
+{
+    hand = strongbinder
+    % not sure what to set this as. Don't want the hip1R being stretched away from the coat unphysiologically. 
+    stiffness = 1000000
+   
+}
+
+set single mother_filament_maker
+{
+    hand = nucleator
+    
+}
+
+set solid bud
+{
+
+% confine = surface, [spring stiffness], insidecell
+% to compare with Hassinger 2017: 
+% 2 low, 20 phyiol , 200 high
+
+    %% I made "first_surface" property
+    % which only confines "point0" to the surface. 
+    % in units of pN per micron.
+
+    confine = first_surface, 150, insidecell
+
+    steric = 1
+    % what should this be? is it being set separately?
+    viscosity = 15
+    display = ( style=6; coloring=2; visible=1; )
+}
+new 1 solid bud 
+
+{
+    nb_points = 271
+    %% set each point as (position X position y position Z, radius, thing_attached)
+    % to make a point, radius can be set to nothing.
+    % I wrote a script to generate this given a desired radius coverage and 
+    % number of points: sphericalcoordinategenerator.m
+    	
+    point0 = 0 0 0, 0.045000 
+    point1 = 0.006257 -0.013997 0.042308, , hip1r 
+    point2 = 0.015679 0.039220 0.015522, , hip1r 
+    point3 = 0.031800 0.031282 -0.005931, , hip1r 
+    point4 = 0.015321 -0.032036 0.027640, , hip1r 
+    point5 = -0.029124 -0.034273 0.001451, , hip1r 
+    point6 = 0.043000 0.004370 0.012524, , hip1r 
+    point7 = 0.035673 -0.027329 0.002360, , hip1r 
+    point8 = -0.044753 -0.004337 0.001844, , hip1r 
+    point9 = -0.014694 -0.004221 0.042324, , hip1r 
+    point10 = -0.026519 -0.020958 0.029707, , hip1r 
+    point11 = 0.002879 -0.043845 0.009713, , hip1r 
+    point12 = 0.025197 -0.032337 0.018559, , hip1r 
+    point13 = -0.032883 0.029782 -0.007534, , hip1r 
+    point14 = 0.038582 0.022703 0.004582, , hip1r 
+    point15 = -0.004315 -0.042436 0.014337, , hip1r 
+    point16 = -0.017012 0.030049 0.028856, , hip1r 
+    point17 = 0.017348 -0.027431 0.031170, , hip1r 
+    point18 = -0.031094 0.032402 -0.002874, , hip1r 
+    point19 = 0.018813 -0.035148 0.020873, , hip1r 
+    point20 = 0.020042 0.040280 0.000937, , hip1r 
+    point21 = 0.014564 0.015415 0.039690, , hip1r 
+    point22 = 0.032765 -0.030813 -0.001418, , hip1r 
+    point23 = 0.011053 0.003142 0.043508, , hip1r 
+    point24 = -0.017370 -0.041360 -0.003554, , hip1r 
+    point25 = -0.004566 -0.044623 -0.003597, , hip1r 
+    point26 = -0.038573 0.016071 0.016698, , hip1r 
+    point27 = -0.016956 0.015955 0.038509, , hip1r 
+    point28 = 0.027556 -0.003541 0.035399, , hip1r 
+    point29 = -0.035813 0.026367 0.006870, , hip1r 
+    point30 = -0.041859 0.016516 0.000107, , hip1r 
+    point31 = 0.007115 0.010730 0.043119, , hip1r 
+    point32 = -0.020605 0.039797 0.004077, , hip1r 
+    point33 = -0.017432 0.040944 -0.006684, , hip1r 
+    point34 = 0.028676 -0.022388 0.026485, , hip1r 
+    point35 = 0.000818 0.043742 0.010535, , hip1r 
+    point36 = -0.013539 0.033773 0.026478, , hip1r 
+    point37 = -0.025430 0.016393 0.033311, , hip1r 
+    point38 = -0.011716 -0.043373 0.002545, , hip1r 
+    point39 = 0.027639 0.035009 0.005953, , hip1r 
+    point40 = 0.023198 -0.024296 0.029943, , hip1r 
+    point41 = 0.037187 0.021415 0.013549, , hip1r 
+    point42 = -0.037981 0.009311 0.022266, , hip1r 
+    point43 = 0.020187 0.003902 0.040028, , hip1r 
+    point44 = 0.000216 -0.010726 0.043703, , hip1r 
+    point45 = -0.012669 -0.039026 0.018478, , hip1r 
+    point46 = 0.007422 0.032734 0.029974, , hip1r 
+    point47 = -0.015457 -0.032798 0.026653, , hip1r 
+    point48 = -0.031817 -0.011975 0.029483, , hip1r 
+    point49 = 0.016142 -0.022019 0.035771, , hip1r 
+    point50 = -0.035842 -0.013818 0.023440, , hip1r 
+    point51 = 0.036209 -0.025695 0.007327, , hip1r 
+    point52 = -0.025788 0.014279 0.034001, , hip1r 
+    point53 = -0.027701 0.034298 0.009018, , hip1r 
+    point54 = -0.039665 0.002749 0.021074, , hip1r 
+    point55 = -0.001478 0.039448 0.021602, , hip1r 
+    point56 = 0.024917 -0.011884 0.035537, , hip1r 
+    point57 = -0.028186 0.005974 0.034567, , hip1r 
+    point58 = -0.001094 0.043435 0.011713, , hip1r 
+    point59 = -0.030067 0.013868 0.030473, , hip1r 
+    point60 = -0.012490 -0.040628 0.014777, , hip1r 
+    point61 = -0.036459 0.025682 -0.006018, , hip1r 
+    point62 = 0.018497 0.040517 0.006419, , hip1r 
+    point63 = 0.027379 -0.034729 0.008322, , hip1r 
+    point64 = -0.038401 -0.022451 -0.006807, , hip1r 
+    point65 = -0.031458 0.032025 0.003132, , hip1r 
+    point66 = 0.007664 0.042636 0.012183, , hip1r 
+    point67 = 0.008628 0.043729 -0.006192, , hip1r 
+    point68 = -0.016555 -0.002328 0.041779, , hip1r 
+    point69 = -0.030243 0.013445 0.030490, , hip1r 
+    point70 = -0.002416 -0.044166 -0.008281, , hip1r 
+    point71 = 0.040553 0.019223 0.003301, , hip1r 
+    point72 = 0.023331 -0.033271 0.019331, , hip1r 
+    point73 = -0.018867 -0.040016 0.008231, , hip1r 
+    point74 = 0.025473 0.029505 0.022486, , hip1r 
+    point75 = 0.023778 -0.029338 0.024472, , hip1r 
+    point76 = 0.009320 0.028583 0.033483, , hip1r 
+    point77 = -0.029572 -0.023643 0.024321, , hip1r 
+    point78 = -0.011468 -0.003179 0.043398, , hip1r 
+    point79 = 0.021230 0.034558 0.019495, , hip1r 
+    point80 = 0.035979 0.001278 0.026998, , hip1r 
+    point81 = 0.005967 -0.043934 -0.007696, , hip1r 
+    point82 = 0.003936 -0.042241 0.015006, , hip1r 
+    point83 = -0.039574 0.021411 -0.000700, , hip1r 
+    point84 = 0.036260 0.013523 0.022965, , hip1r 
+    point85 = -0.034579 -0.020670 0.020051, , hip1r 
+    point86 = 0.020641 0.039985 0.000379, , hip1r 
+    point87 = -0.005920 -0.043787 -0.008525, , hip1r 
+    point88 = -0.040818 -0.008933 0.016707, , hip1r 
+    point89 = -0.000861 0.044716 -0.004974, , hip1r 
+    point90 = 0.038775 -0.022260 0.005093, , hip1r 
+    point91 = 0.002195 -0.042591 0.014359, , hip1r 
+    point92 = 0.033678 -0.028936 -0.007314, , hip1r 
+    point93 = 0.040858 0.018851 0.000477, , hip1r 
+    point94 = 0.018042 0.040657 -0.006819, , hip1r 
+    point95 = -0.003558 -0.043708 0.010097, , hip1r 
+    point96 = -0.012402 -0.035648 0.024503, , hip1r 
+    point97 = 0.006864 -0.040084 0.019265, , hip1r 
+    point98 = -0.044796 -0.000536 -0.004242, , hip1r 
+    point99 = -0.007549 0.003817 0.044198, , hip1r 
+    point100 = -0.020108 -0.016900 0.036539, , hip1r 
+    point101 = 0.025001 -0.031911 0.019535, , hip1r 
+    point102 = -0.020135 -0.037064 0.015678, , hip1r 
+    point103 = -0.016541 -0.002470 0.041777, , hip1r 
+    point104 = -0.013283 0.041940 0.009466, , hip1r 
+    point105 = -0.012805 -0.043032 -0.003040, , hip1r 
+    point106 = -0.016418 0.015107 0.039080, , hip1r 
+    point107 = -0.036079 -0.016341 0.021360, , hip1r 
+    point108 = 0.025644 -0.021802 0.029868, , hip1r 
+    point109 = 0.024396 -0.036912 -0.008203, , hip1r 
+    point110 = 0.034866 -0.025736 0.012127, , hip1r 
+    point111 = 0.029988 -0.012091 0.031298, , hip1r 
+    point112 = 0.009734 -0.022326 0.037839, , hip1r 
+    point113 = 0.042219 0.000360 0.015570, , hip1r 
+    point114 = 0.044991 0.000874 0.000299, , hip1r 
+    point115 = 0.038373 0.023505 -0.000198, , hip1r 
+    point116 = -0.003031 0.044898 -0.000001, , hip1r 
+    point117 = 0.029178 0.004208 0.033999, , hip1r 
+    point118 = -0.037498 0.019378 0.015601, , hip1r 
+    point119 = -0.024336 0.037785 -0.002247, , hip1r 
+    point120 = -0.022569 -0.006000 0.038466, , hip1r 
+    point121 = 0.040229 -0.020127 -0.001243, , hip1r 
+    point122 = -0.013459 0.042790 -0.003588, , hip1r 
+    point123 = -0.015947 0.025809 0.033235, , hip1r 
+    point124 = 0.011993 -0.014594 0.040843, , hip1r 
+    point125 = -0.021861 0.034220 0.019392, , hip1r 
+    point126 = 0.029091 0.034332 -0.000091, , hip1r 
+    point127 = -0.040433 -0.001983 0.019653, , hip1r 
+    point128 = 0.024149 -0.030472 0.022656, , hip1r 
+    point129 = -0.030867 0.027451 0.017852, , hip1r 
+    point130 = -0.007946 -0.022375 0.038226, , hip1r 
+    point131 = -0.016886 -0.017514 0.037857, , hip1r 
+    point132 = -0.042789 0.013788 -0.002006, , hip1r 
+    point133 = -0.042653 0.007136 0.012441, , hip1r 
+    point134 = 0.031296 -0.010232 0.030674, , hip1r 
+    point135 = 0.038920 0.022524 -0.001699, , hip1r 
+    point136 = -0.003076 0.016220 0.041862, , hip1r 
+    point137 = -0.037964 0.013130 0.020281, , hip1r 
+    point138 = -0.038016 -0.023319 0.006001, , hip1r 
+    point139 = 0.026037 -0.025189 0.026694, , hip1r 
+    point140 = -0.037755 0.007423 0.023334, , hip1r 
+    point141 = -0.038655 0.016035 0.016543, , hip1r 
+    point142 = -0.001076 -0.044867 -0.003289, , hip1r 
+    point143 = -0.043992 0.008992 0.002969, , hip1r 
+    point144 = 0.011529 -0.013790 0.041254, , hip1r 
+    point145 = -0.032849 0.007016 0.029946, , hip1r 
+    point146 = -0.037734 0.000449 0.024514, , hip1r 
+    point147 = -0.044828 0.003548 -0.001692, , hip1r 
+    point148 = 0.005027 0.038749 0.022322, , hip1r 
+    point149 = 0.027136 0.016176 0.032047, , hip1r 
+    point150 = 0.039352 0.017733 0.012727, , hip1r 
+    point151 = 0.031126 -0.026285 0.019112, , hip1r 
+    point152 = 0.004736 0.044611 -0.003522, , hip1r 
+    point153 = 0.028815 -0.034128 -0.005474, , hip1r 
+    point154 = -0.010713 -0.043698 0.000834, , hip1r 
+    point155 = 0.031028 -0.031892 0.006719, , hip1r 
+    point156 = 0.041385 -0.016989 0.004866, , hip1r 
+    point157 = 0.028660 0.034507 -0.003584, , hip1r 
+    point158 = -0.013717 0.010793 0.041477, , hip1r 
+    point159 = 0.035835 -0.004398 0.026861, , hip1r 
+    point160 = -0.002814 -0.003618 0.044766, , hip1r 
+    point161 = 0.035799 -0.027264 0.000283, , hip1r 
+    point162 = -0.041158 0.004614 0.017598, , hip1r 
+    point163 = 0.037118 0.003295 0.025227, , hip1r 
+    point164 = -0.022102 -0.021521 0.032761, , hip1r 
+    point165 = 0.004979 0.041718 0.016119, , hip1r 
+    point166 = -0.033591 -0.005848 0.029368, , hip1r 
+    point167 = -0.002793 -0.017631 0.041308, , hip1r 
+    point168 = -0.015456 -0.012369 0.040412, , hip1r 
+    point169 = -0.015166 -0.009408 0.041310, , hip1r 
+    point170 = -0.035415 0.015741 0.022870, , hip1r 
+    point171 = 0.000863 0.023548 0.038337, , hip1r 
+    point172 = -0.035863 0.017163 0.021077, , hip1r 
+    point173 = 0.044769 0.002867 -0.003543, , hip1r 
+    point174 = -0.028525 -0.023245 0.025903, , hip1r 
+    point175 = 0.022473 -0.006076 0.038510, , hip1r 
+    point176 = 0.035231 0.024088 0.014268, , hip1r 
+    point177 = 0.043825 0.009967 -0.002252, , hip1r 
+    point178 = 0.027643 -0.023992 0.026177, , hip1r 
+    point179 = 0.000271 0.014090 0.042736, , hip1r 
+    point180 = 0.025114 0.001408 0.037314, , hip1r 
+    point181 = 0.007476 -0.017299 0.040864, , hip1r 
+    point182 = 0.028397 0.034547 0.005012, , hip1r 
+    point183 = 0.029235 -0.027500 0.020348, , hip1r 
+    point184 = 0.036422 0.024879 0.008915, , hip1r 
+    point185 = -0.026680 0.035507 0.007241, , hip1r 
+    point186 = -0.035568 -0.023660 0.014147, , hip1r 
+    point187 = -0.037522 -0.022248 0.011051, , hip1r 
+    point188 = -0.022219 -0.039058 -0.002399, , hip1r 
+    point189 = -0.026327 -0.035308 0.009233, , hip1r 
+    point190 = -0.041061 0.018271 -0.002272, , hip1r 
+    point191 = 0.025820 0.031115 0.019754, , hip1r 
+    point192 = 0.000304 -0.025071 0.037368, , hip1r 
+    point193 = 0.000919 0.017798 0.041321, , hip1r 
+    point194 = -0.026075 -0.036107 0.006431, , hip1r 
+    point195 = 0.021819 -0.027279 0.028369, , hip1r 
+    point196 = 0.038081 0.022318 0.008757, , hip1r 
+    point197 = 0.043253 -0.007664 0.009769, , hip1r 
+    point198 = 0.041118 0.008235 0.016323, , hip1r 
+    point199 = 0.022773 -0.038284 0.006384, , hip1r 
+    point200 = 0.021211 -0.035502 0.017740, , hip1r 
+ 
+
+    %% these points are to make the neck. they are a series of 
+    % overlapping spheres. the last value (0.03) sets the radius of the neck.
+
+    point201 = 0 0 -0.034,  0.03
+    point202 = 0 0 -0.036,  0.03
+    point203 = 0 0 -0.038,  0.03
+    point204 = 0 0 -0.04,  0.03
+    point205 = 0 0 -0.042,  0.03
+    point206 = 0 0 -0.044,  0.03
+    point207 = 0 0 -0.046,  0.03
+    point208 = 0 0 -0.048,  0.03
+    point209 = 0 0 -0.05,  0.03
+    point210 = 0 0 -0.052,  0.03
+    point211 = 0 0 -0.054,  0.03
+    point212 = 0 0 -0.056,  0.03
+    point213 = 0 0 -0.058,  0.03
+    point214 = 0 0 -0.06,   0.03
+    point215 = 0 0 -0.062,  0.03
+    point216 = 0 0 -0.064,  0.03
+    point217 = 0 0 -0.066,  0.03
+    point218 = 0 0 -0.068,  0.03
+    point219 = 0 0 -0.07,  0.03
+    point220 = 0 0 -0.072,  0.03
+    point221 = 0 0 -0.074,  0.03
+    point222 = 0 0 -0.076,  0.03
+    point223 = 0 0 -0.078,  0.03
+    point224 = 0 0 -0.08,   0.03
+    point225 = 0 0 -0.082,  0.03
+    point226 = 0 0 -0.084,  0.03
+    point227 = 0 0 -0.086,  0.03
+    point228 = 0 0 -0.088,  0.03
+    point229 = 0 0 -0.09,  0.03
+    point230 = 0 0 -0.092,  0.03
+    point231 = 0 0 -0.094,  0.03
+    point232 = 0 0 -0.096,  0.03
+    point233 = 0 0 -0.098,  0.03
+    point234 = 0 0 -0.100,   0.03
+    point235 = 0 0 -0.102,  0.03
+    point236 = 0 0 -0.104,  0.03
+    point237 = 0 0 -0.106,  0.03
+    point238 = 0 0 -0.108,  0.03
+    point239 = 0 0 -0.11,  0.03
+    point240 = 0 0 -0.112,  0.03
+    point241 = 0 0 -0.114,  0.03
+    point242 = 0 0 -0.116,  0.03
+    point243 = 0 0 -0.118,  0.03
+    point244 = 0 0 -0.120,   0.03
+    point245 = 0 0 -0.122,  0.03
+    point246 = 0 0 -0.124,  0.03
+    point247 = 0 0 -0.126,  0.03
+    point248 = 0 0 -0.128,  0.03
+    point249 = 0 0 -0.13,  0.03
+    point250 = 0 0 -0.132,  0.03
+    point251 = 0 0 -0.134,  0.03
+    point252 = 0 0 -0.136,  0.03
+    point253 = 0 0 -0.138,  0.03
+    point254 = 0 0 -0.140,   0.03
+    point255 = 0 0 -0.142,  0.03
+    point256 = 0 0 -0.144,  0.03
+    point257 = 0 0 -0.146,  0.03
+    point258 = 0 0 -0.148,  0.03
+    point259 = 0 0 -0.15,  0.03
+    point260 = 0 0 -0.152,  0.03
+    point261 = 0 0 -0.154,  0.03
+    point262 = 0 0 -0.156,  0.03
+    point263 = 0 0 -0.158,  0.03
+    point264 = 0 0 -0.160,   0.03
+    point265 = 0 0 -0.162,  0.03
+    point266 = 0 0 -0.164,  0.03
+    point267 = 0 0 -0.166,  0.03
+    point268 = 0 0 -0.168,  0.03
+    point269 = 0 0 -0.17,  0.03
+    point270 = 0 0 -0.19,  0.05
+
+    % upright
+    orientation = none
+
+    % offset a tiny bit so that the confinement does not make a solving error
+    position = 0 0 -0.399     
+
+    
+}
+
+
+
+new 0	 fiber actin
+{
+
+    length = 1
+    end_state = 1, 4
+    position = 0 0 -0.05
+
+}
+
+
+new 20 single mother_filament_maker
+{
+
+   position = disc  0.12 0 at 0 0 -0.399
+
+}
+
+
+new 200 couple arp2
+{
+   
+    position = circle 0.0825 0.075 at 0 0 -0.399
+    
+}
+
+% for 1 micron cubed volume, should be 5 micromolar
+
+% new 3010 couple fimbrin
+% {
+
+% }
+
+
+
+
+run simul *
+{   
+    nb_frames = 150
+    nb_steps = 300000 % 15 s
+    % nb_steps = 100000 % 5 s
+
+}

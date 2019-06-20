@@ -1,0 +1,1401 @@
+% mammalian endocytosis
+% Matt Akamatsu, Drubin lab 2017
+
+
+set simul internalize.cym
+{
+    
+    % time step needs to be small for branching to work properly (explicit solvation of the Fork class)
+
+    time_step = 0.00005
+
+
+    % viscosity in pN.s/um^2 = Pa.s. Water is ~0.001. 
+    % yeast cytoplasm or mammalian egg oocyte was estimated to be ~1.
+    % On the other hand it could be as low as 0.0196, in cerevisiae and HeLa (Liam Holt)
+
+    viscosity = 1 
+    % toggle steric
+     steric = 1
+}
+
+%% space including 'extracellular' space to fit endocytic bud
+
+set space cell
+{
+    geometry = ( strip 0.5 0.5 0.5)
+    
+}
+
+new space cell
+
+%% space demarcating the plasma membrane. this is the boundary for
+% proteins and the resting point of endocytic bud
+
+set space insidecell
+
+{
+	geometry = (strip 0.5 0.5 0.4 ) 
+    
+    display = {visible=1; color=white}
+
+}
+new space insidecell
+
+%% to visually separate inside from outside cell
+
+set space membraneMarker
+{
+    geometry = (square 0.4 0.4 0.4)
+    display = {visible=1; color=black}
+
+}
+
+new space membraneMarker
+
+
+set fiber actin
+{
+    rigidity = 0.041 % which is a persistence length of 10 µm. see mccullough de la cruz 2008
+    segmentation = 0.01
+
+    % unclear how strong to set the confinement for mammalian cells.
+
+    confine = inside, 10000, insidecell
+    
+    % the 'classic' activity is for microtubules, with growth and "catastrophe" at plus end.
+    % here we take advantage of the stochastic nature of catstrophe to define capping as
+    % an irreversible catastrophe wih no shrinking.
+
+    activity        = classic
+
+    % 182 subunits per second is 0.5 micron per second 
+    % this is a conservative estimate for ~20 µM available actin monomers
+
+    growing_speed   =   0.5
+
+    % actin does not shrink
+
+    shrinking_speed =    0
+
+    % catastrophe rate is the capping rate for actin.
+
+    % Given a growing speed 0.5, this makes avg 150nm filaments. determined with deterministic plots of exponentially distributed filament lengths.
+    % the second term sets the force AND speed-dependent catastrophe (or capping) rate.  h 
+    % for capping it doesn't make sense for it to depend on speed so keep this second term at 0 for now.
+
+    catastrophe_rate = 6.3, 0 
+  
+    % stall force for actin filament growth, scaled by an exponetial, in pN. 
+    % realistic values are between 1 and 9 pN depending on actin concentration.
+
+    growing_force   =     5
+
+    display = {line = 5, 1; point = 1; end_style = 5; rainbow = 0.01}
+
+    % binding_key = 3
+    % binding_key = (3) 
+    % according to binary, 3 should bind 1 AND 2. 
+    % currently there is only one type of fiber so this is not needed.
+
+    steric = 1
+    steric_radius = 0.008
+    
+}
+
+%% this is for arp2/3 complex
+
+set hand binder
+{
+    %Beltzner 2008: kon = 0.00015/uM/s.  Conversion assuming 100 nm filaments. 
+    binding_rate = 08  
+    binding_range = 0.01 
+    unbinding_rate = 0.0034 % Beltzner 2008: GST-VCA + Arp2/3 from filament
+
+    % should I set a high unbinding force or turn off force-dependent change in unbinding rate?
+    % unbinding_force = 10
+    display = { size = 0; color=orange }
+    binding_key = 3 
+
+    % binding_key = (3) 
+    % according to binary, 3 should bind 1 AND 2. 
+    % currently there is only one type of fiber so this is not needed. 
+}
+
+%% the nucleation module of arp2/3 complex. 
+
+set hand boundNucleator
+{
+ 
+    activity = nucleate
+    binding_rate = 0
+    % nucleate at 1 per second. because there is no unbinding this only happens once per arp2/3.
+    nucleate = 1, actin, (fiber_length=0.005;  end_state=1)
+    display = { size=8; color=blue; }
+
+}
+% set hand ABD1
+% {
+%     binding_rate = 2.5 %s-1
+%     binding_range = 0.016 % nm, what should it be . 2x the width? nt sure how this is calculated.
+%     unbinding_rate = 0.043 % s-1. set to be 350 nM
+%     display = {size = 5; color = green}
+%     binding_key = 1
+% }
+
+% set hand ABD2
+% {
+%     binding_rate = 2.5 %s-1
+%     binding_range = 0.016 % nm, what should it be
+%     unbinding_rate = 0.043 % s-1. set to be 350 nM
+%     display = {size = 5; color = green}
+%     binding_key = 1
+% }
+
+% set couple fimbrin
+% {
+
+%      activity = bridge
+%     confine = inside, 100, insidecell
+
+%      % specificity = parallel
+%      hand1 = ABD1 % since ABD2 seems to be important for ABD1 binding
+%      hand2 = ABD2
+%      stiffness = 1000
+%      stiff = 1
+%      length = 0.009 % um
+%      diffusion = 1
+%      confine = inside, 100 
+%      % trans_activated = 1;
+%      % diffusion = ;
+
+%% hip1R. I estimated Kd to be 400nM. to actin. <1 nM to clathrin. so we assume that hip1R stays attached to 
+% the endocytic bud. 
+
+set hand strongbinder
+{
+    binding_rate = 10
+    binding_range = 0.006
+    unbinding_rate = 4
+    % unbinding_force = 1 % don't know physiological range for this
+    display = { size = 10; color=purple }
+    binding_key = 1
+}
+
+%% the linear actin filament nucleators to serve as mother filaments for arp2/3 complex
+
+set hand nucleator
+{
+ 
+    activity = nucleate
+    binding_rate = 0
+    nucleate = 10, actin, (fiber_length=0.005;  end_state=1)
+    display = { size=8; color=salmon; }
+
+}
+
+ set couple arp2
+
+ {
+     %% this is a special class that Francois Nedelec wrote. 
+     % it makes a couple with a preferred angle between the two bound fibers (with a defined flexibility).
+     % importantly, it is only solved explicitly not implicitly, so the time step needs to be very small.
+
+     activity = fork
+
+     % angle = 1.22 % 70 degrees
+     angle = 1.344 % 77 degrees (bovine arp2/3, blanchoin 2000)
+
+     % branch junction stiffness
+     angular_stiffness = 0.076; % in pN.micron / rad. blanchoin pollard measured in 2D as 0.076 pN.um / rad^2. 
+     
+     hand1 = binder 
+     hand2 = boundNucleator
+
+    % restrict unbound arp2/3 to surface (base)
+
+     confine = surface, , insidecell
+
+     % models arp23 as mostly stationary on the membrane until it binds a fiber
+     diffusion  = .0001
+    
+     % important: stipulates that arp2/3 needs to bind an actin filament before nucleating a new branched actin filament.
+     trans_activated = 1;
+     
+     % not sure what to set this as. Don't want the arp2/3 being stretched unphysiologically. 
+     stiffness= 100000
+
+ }
+
+set single hip1r
+{
+    hand = strongbinder
+    % not sure what to set this as. Don't want the hip1R being stretched away from the coat unphysiologically. 
+    stiffness = 1000000
+   
+}
+
+set single mother_filament_maker
+{
+    hand = nucleator
+    
+}
+
+set solid bud
+{
+
+% confine = surface, [spring stiffness], insidecell
+% to compare with Hassinger 2017: 
+% 2 low, 20 phyiol , 200 high
+
+    %% I made "first_surface" property
+    % which only confines "point0" to the surface. 
+    % in units of pN per micron.
+
+    confine = first_surface, 150, insidecell
+
+    steric = 1
+    % what should this be? is it being set separately?
+    viscosity = 15
+    display = ( style=6; coloring=2; visible=1; )
+}
+new 1 solid bud 
+
+{
+    nb_points = 1071
+    %% set each point as (position X position y position Z, radius, thing_attached)
+    % to make a point, radius can be set to nothing.
+    % I wrote a script to generate this given a desired radius coverage and 
+    % number of points: sphericalcoordinategenerator.m
+    	
+point0 = 0 0 0, 0.045000 
+point1 = -0.038573 -0.022858 -0.003823, , hip1r 
+point2 = 0.014011 0.013424 0.040602, , hip1r 
+point3 = 0.011096 0.005973 0.043200, , hip1r 
+point4 = 0.041873 0.008552 0.014090, , hip1r 
+point5 = 0.003295 0.005834 0.044498, , hip1r 
+point6 = -0.028805 -0.004409 0.034290, , hip1r 
+point7 = 0.005411 -0.008366 0.043883, , hip1r 
+point8 = -0.015599 0.042151 0.002217, , hip1r 
+point9 = 0.010355 0.026721 0.034695, , hip1r 
+point10 = 0.040864 0.017720 -0.006412, , hip1r 
+point11 = 0.042314 -0.014931 0.003408, , hip1r 
+point12 = 0.001479 0.044967 0.000905, , hip1r 
+point13 = -0.027690 -0.027831 0.021993, , hip1r 
+point14 = 0.009300 0.033313 0.028788, , hip1r 
+point15 = 0.002294 0.044175 0.008264, , hip1r 
+point16 = -0.001861 -0.044941 -0.001360, , hip1r 
+point17 = 0.025032 0.037338 -0.002077, , hip1r 
+point18 = 0.019909 -0.040209 -0.003441, , hip1r 
+point19 = 0.037376 0.025054 -0.000554, , hip1r 
+point20 = 0.040555 -0.005176 0.018802, , hip1r 
+point21 = -0.023405 -0.033624 0.018619, , hip1r 
+point22 = -0.003715 0.017067 0.041472, , hip1r 
+point23 = 0.026971 -0.029741 0.020323, , hip1r 
+point24 = 0.042358 0.008119 0.012840, , hip1r 
+point25 = 0.001535 -0.022300 0.039055, , hip1r 
+point26 = 0.028939 -0.022106 0.026436, , hip1r 
+point27 = -0.024115 -0.022327 0.030740, , hip1r 
+point28 = -0.007836 -0.042151 0.013670, , hip1r 
+point29 = -0.038522 0.008903 0.021489, , hip1r 
+point30 = 0.002172 -0.038862 0.022585, , hip1r 
+point31 = 0.015950 0.000716 0.042072, , hip1r 
+point32 = 0.011349 0.030605 0.030976, , hip1r 
+point33 = 0.026714 0.017297 0.031814, , hip1r 
+point34 = 0.021941 0.038711 0.006709, , hip1r 
+point35 = 0.041137 -0.015619 0.009422, , hip1r 
+point36 = 0.013564 -0.018810 0.038564, , hip1r 
+point37 = 0.015656 0.018281 0.038022, , hip1r 
+point38 = -0.010110 -0.016093 0.040790, , hip1r 
+point39 = 0.043387 0.010702 0.005297, , hip1r 
+point40 = 0.025339 0.034043 0.014968, , hip1r 
+point41 = 0.017933 0.041272 -0.000056, , hip1r 
+point42 = -0.013429 -0.017395 0.039269, , hip1r 
+point43 = 0.020157 -0.025469 0.031146, , hip1r 
+point44 = 0.009649 -0.012705 0.042077, , hip1r 
+point45 = -0.043945 0.001647 0.009546, , hip1r 
+point46 = 0.006463 -0.032896 0.030018, , hip1r 
+point47 = -0.006865 0.043965 0.006707, , hip1r 
+point48 = 0.023655 -0.004917 0.037964, , hip1r 
+point49 = 0.041711 -0.002485 0.016704, , hip1r 
+point50 = 0.012702 0.007453 0.042522, , hip1r 
+point51 = -0.010335 0.018857 0.039529, , hip1r 
+point52 = -0.004643 0.040202 0.019678, , hip1r 
+point53 = 0.009457 0.043493 0.006625, , hip1r 
+point54 = 0.004614 -0.042974 0.012527, , hip1r 
+point55 = -0.019552 0.022162 0.033934, , hip1r 
+point56 = 0.024663 0.035812 0.011586, , hip1r 
+point57 = 0.022603 0.038231 0.007246, , hip1r 
+point58 = 0.027612 -0.021877 0.027999, , hip1r 
+point59 = 0.042390 -0.015024 0.001541, , hip1r 
+point60 = -0.027632 -0.003045 0.035387, , hip1r 
+point61 = 0.031459 0.003648 0.031969, , hip1r 
+point62 = -0.037692 0.020936 0.012885, , hip1r 
+point63 = 0.032369 0.031204 -0.001885, , hip1r 
+point64 = 0.042949 -0.013406 0.000792, , hip1r 
+point65 = -0.005443 0.042695 0.013135, , hip1r 
+point66 = 0.002616 -0.002065 0.044876, , hip1r 
+point67 = 0.035272 -0.027292 -0.006005, , hip1r 
+point68 = 0.007179 -0.044369 0.002206, , hip1r 
+point69 = 0.032282 -0.020824 0.023436, , hip1r 
+point70 = 0.044701 0.004702 -0.002166, , hip1r 
+point71 = 0.042737 -0.011177 0.008583, , hip1r 
+point72 = 0.028246 0.014449 0.031912, , hip1r 
+point73 = -0.005940 0.026469 0.035904, , hip1r 
+point74 = -0.044850 0.003355 -0.001501, , hip1r 
+point75 = 0.035117 -0.006568 0.027361, , hip1r 
+point76 = -0.032448 -0.014802 0.027442, , hip1r 
+point77 = -0.005768 0.038008 0.023391, , hip1r 
+point78 = 0.030884 0.032511 0.003771, , hip1r 
+point79 = 0.015044 0.022194 0.036140, , hip1r 
+point80 = -0.005226 0.044004 0.007832, , hip1r 
+point81 = -0.040089 0.017681 0.010261, , hip1r 
+point82 = -0.035709 0.027376 0.000647, , hip1r 
+point83 = -0.033624 0.017067 0.024558, , hip1r 
+point84 = -0.016952 -0.014830 0.038957, , hip1r 
+point85 = -0.042489 0.014755 -0.001412, , hip1r 
+point86 = 0.044403 0.003361 0.006488, , hip1r 
+point87 = 0.041795 0.009142 0.013949, , hip1r 
+point88 = -0.035978 0.026567 0.004979, , hip1r 
+point89 = 0.044421 -0.005768 0.004302, , hip1r 
+point90 = -0.040895 -0.011262 0.015025, , hip1r 
+point91 = 0.038323 -0.023522 0.001751, , hip1r 
+point92 = -0.019827 0.039426 0.008801, , hip1r 
+point93 = -0.010582 0.040665 0.016104, , hip1r 
+point94 = 0.032090 -0.030526 0.007960, , hip1r 
+point95 = 0.008106 -0.043772 -0.006580, , hip1r 
+point96 = -0.034359 0.026855 0.011101, , hip1r 
+point97 = 0.033245 -0.030318 0.000767, , hip1r 
+point98 = -0.025479 0.012848 0.034796, , hip1r 
+point99 = -0.043787 0.009390 0.004420, , hip1r 
+point100 = -0.027220 0.013884 0.033035, , hip1r 
+point101 = -0.037432 0.010821 0.022512, , hip1r 
+point102 = -0.015111 -0.042325 0.002293, , hip1r 
+point103 = 0.031711 0.021720 0.023402, , hip1r 
+point104 = -0.001515 -0.014526 0.042564, , hip1r 
+point105 = 0.020063 0.021370 0.034144, , hip1r 
+point106 = -0.014243 0.000311 0.042685, , hip1r 
+point107 = -0.002654 0.043681 0.010485, , hip1r 
+point108 = -0.027030 -0.017553 0.031405, , hip1r 
+point109 = 0.005476 0.038685 0.022326, , hip1r 
+point110 = 0.026287 -0.007616 0.035721, , hip1r 
+point111 = 0.041441 0.017321 -0.002761, , hip1r 
+point112 = 0.014785 0.033160 0.026585, , hip1r 
+point113 = -0.021006 -0.020807 0.033923, , hip1r 
+point114 = -0.011564 0.043441 0.002049, , hip1r 
+point115 = 0.007046 0.008217 0.043679, , hip1r 
+point116 = 0.005143 0.012738 0.042852, , hip1r 
+point117 = 0.040362 -0.011283 0.016390, , hip1r 
+point118 = -0.012898 0.042772 -0.005402, , hip1r 
+point119 = 0.003473 0.043095 0.012480, , hip1r 
+point120 = -0.023121 -0.036513 0.012536, , hip1r 
+point121 = 0.043806 0.001183 0.010231, , hip1r 
+point122 = 0.039456 0.021103 -0.004784, , hip1r 
+point123 = -0.011125 0.028313 0.033160, , hip1r 
+point124 = 0.007313 0.044314 -0.002785, , hip1r 
+point125 = -0.005115 -0.014289 0.042364, , hip1r 
+point126 = -0.013839 -0.042804 0.001150, , hip1r 
+point127 = 0.007439 -0.009998 0.043240, , hip1r 
+point128 = -0.036271 -0.014113 0.022588, , hip1r 
+point129 = -0.038973 -0.018439 0.012888, , hip1r 
+point130 = -0.028497 -0.005607 0.034373, , hip1r 
+point131 = 0.028412 -0.034838 0.002011, , hip1r 
+point132 = -0.028242 0.009899 0.033607, , hip1r 
+point133 = -0.020478 0.018428 0.035582, , hip1r 
+point134 = -0.035849 -0.024481 0.011853, , hip1r 
+point135 = -0.015126 0.041981 -0.005817, , hip1r 
+point136 = 0.035443 0.026130 0.009275, , hip1r 
+point137 = -0.020914 0.021734 0.033395, , hip1r 
+point138 = 0.007796 0.044107 -0.004334, , hip1r 
+point139 = -0.023478 -0.029581 0.024469, , hip1r 
+point140 = 0.002151 -0.012721 0.043111, , hip1r 
+point141 = -0.027953 0.013146 0.032723, , hip1r 
+point142 = -0.032470 -0.030902 -0.003972, , hip1r 
+point143 = -0.008168 0.044211 -0.001925, , hip1r 
+point144 = -0.042505 0.005900 0.013547, , hip1r 
+point145 = -0.016825 0.039055 0.014718, , hip1r 
+point146 = 0.001072 -0.002034 0.044941, , hip1r 
+point147 = -0.001025 -0.023845 0.038149, , hip1r 
+point148 = 0.018580 0.023740 0.033409, , hip1r 
+point149 = 0.040922 0.018715 0.000352, , hip1r 
+point150 = -0.037250 -0.007625 0.024069, , hip1r 
+point151 = -0.001343 -0.035342 0.027824, , hip1r 
+point152 = 0.016800 -0.028110 0.030864, , hip1r 
+point153 = -0.006309 -0.033837 0.028988, , hip1r 
+point154 = 0.029921 -0.025516 0.021878, , hip1r 
+point155 = 0.014973 0.024555 0.034610, , hip1r 
+point156 = 0.012863 0.040663 0.014356, , hip1r 
+point157 = 0.032435 -0.029715 0.009486, , hip1r 
+point158 = -0.043028 0.010485 0.007979, , hip1r 
+point159 = 0.014179 0.033959 0.025898, , hip1r 
+point160 = -0.006994 -0.043950 -0.006667, , hip1r 
+point161 = 0.023662 -0.021247 0.031838, , hip1r 
+point162 = 0.013300 -0.042744 0.004593, , hip1r 
+point163 = 0.021018 -0.031791 0.023928, , hip1r 
+point164 = -0.043716 -0.010654 -0.000617, , hip1r 
+point165 = 0.009413 0.036273 0.024913, , hip1r 
+point166 = -0.043673 -0.008458 0.006789, , hip1r 
+point167 = 0.020187 -0.030397 0.026335, , hip1r 
+point168 = 0.009709 0.043876 -0.002367, , hip1r 
+point169 = -0.009293 -0.043802 0.004471, , hip1r 
+point170 = 0.025691 -0.030016 0.021541, , hip1r 
+point171 = -0.037834 0.006906 0.023364, , hip1r 
+point172 = -0.036360 0.009213 0.024861, , hip1r 
+point173 = 0.037201 -0.014049 0.021064, , hip1r 
+point174 = -0.026140 -0.027262 0.024463, , hip1r 
+point175 = 0.006378 -0.017242 0.041074, , hip1r 
+point176 = -0.032326 0.023012 0.021225, , hip1r 
+point177 = -0.018779 0.039017 0.012248, , hip1r 
+point178 = -0.025182 0.024005 0.028542, , hip1r 
+point179 = -0.007489 -0.037921 0.023041, , hip1r 
+point180 = 0.007520 0.020115 0.039545, , hip1r 
+point181 = -0.040595 0.002557 0.019248, , hip1r 
+point182 = 0.024840 0.023554 0.029210, , hip1r 
+point183 = 0.005646 0.006818 0.044121, , hip1r 
+point184 = 0.042466 -0.014630 -0.002758, , hip1r 
+point185 = -0.020328 -0.021906 0.033643, , hip1r 
+point186 = -0.041020 0.016643 0.008083, , hip1r 
+point187 = -0.006844 -0.025179 0.036663, , hip1r 
+point188 = -0.043584 -0.008214 -0.007613, , hip1r 
+point189 = -0.023766 -0.033783 0.017856, , hip1r 
+point190 = 0.007908 -0.044189 -0.003136, , hip1r 
+point191 = -0.032911 -0.030143 0.005769, , hip1r 
+point192 = -0.041173 -0.000540 0.018152, , hip1r 
+point193 = -0.043129 0.003975 0.012210, , hip1r 
+point194 = 0.028202 0.023376 0.026138, , hip1r 
+point195 = 0.036213 -0.020943 0.016584, , hip1r 
+point196 = -0.040988 0.018470 0.001967, , hip1r 
+point197 = -0.029895 0.014763 0.030221, , hip1r 
+point198 = 0.033666 0.006266 0.029195, , hip1r 
+point199 = -0.036508 -0.002395 0.026200, , hip1r 
+point200 = 0.043777 -0.010161 -0.002303, , hip1r 
+point201 = -0.003282 0.020430 0.039961, , hip1r 
+point202 = -0.001228 -0.029638 0.033839, , hip1r 
+point203 = 0.025768 0.023241 0.028651, , hip1r 
+point204 = 0.004448 -0.036446 0.026018, , hip1r 
+point205 = 0.004401 -0.044413 0.005756, , hip1r 
+point206 = -0.043444 -0.011378 -0.002862, , hip1r 
+point207 = 0.007592 0.013670 0.042196, , hip1r 
+point208 = 0.017264 -0.008108 0.040758, , hip1r 
+point209 = 0.002169 0.008068 0.044218, , hip1r 
+point210 = 0.028599 0.003569 0.034560, , hip1r 
+point211 = -0.009005 -0.006683 0.043580, , hip1r 
+point212 = -0.031601 -0.025275 0.019687, , hip1r 
+point213 = -0.031176 0.006180 0.031857, , hip1r 
+point214 = -0.036808 -0.025462 -0.004676, , hip1r 
+point215 = -0.007395 -0.043932 0.006345, , hip1r 
+point216 = -0.034329 0.022362 0.018613, , hip1r 
+point217 = -0.015551 -0.010946 0.040784, , hip1r 
+point218 = -0.037430 0.018862 0.016376, , hip1r 
+point219 = 0.031785 0.030547 0.009033, , hip1r 
+point220 = -0.025452 0.035054 0.012184, , hip1r 
+point221 = -0.037388 -0.011308 0.022344, , hip1r 
+point222 = 0.015643 0.016061 0.039017, , hip1r 
+point223 = 0.039220 0.022044 0.000903, , hip1r 
+point224 = -0.007877 0.031118 0.031538, , hip1r 
+point225 = -0.018398 -0.037150 0.017504, , hip1r 
+point226 = -0.043344 0.011992 0.001577, , hip1r 
+point227 = -0.041470 0.000205 0.017469, , hip1r 
+point228 = 0.032382 0.012464 0.028654, , hip1r 
+point229 = 0.040249 0.020066 -0.001544, , hip1r 
+point230 = -0.008608 0.013973 0.041901, , hip1r 
+point231 = -0.022991 0.038285 0.005539, , hip1r 
+point232 = 0.044652 -0.004232 -0.003648, , hip1r 
+point233 = 0.000422 -0.040338 0.019942, , hip1r 
+point234 = -0.024502 -0.032223 0.019654, , hip1r 
+point235 = 0.019307 -0.017487 0.036694, , hip1r 
+point236 = -0.044338 -0.003319 -0.006937, , hip1r 
+point237 = -0.032017 0.031537 -0.002318, , hip1r 
+point238 = 0.030520 -0.027332 0.018614, , hip1r 
+point239 = 0.001030 0.038654 0.023018, , hip1r 
+point240 = 0.012265 0.020445 0.038165, , hip1r 
+point241 = -0.024295 -0.037550 -0.004973, , hip1r 
+point242 = -0.000184 0.005196 0.044699, , hip1r 
+point243 = 0.015557 0.023717 0.034935, , hip1r 
+point244 = -0.005927 0.035122 0.027501, , hip1r 
+point245 = -0.004634 0.014666 0.042290, , hip1r 
+point246 = 0.025311 0.000939 0.037195, , hip1r 
+point247 = 0.005971 0.044247 0.005614, , hip1r 
+point248 = -0.019635 -0.035779 0.018957, , hip1r 
+point249 = 0.035950 -0.004160 0.026745, , hip1r 
+point250 = -0.001214 0.031397 0.032215, , hip1r 
+point251 = -0.029286 -0.027217 0.020653, , hip1r 
+point252 = 0.027860 -0.004983 0.034986, , hip1r 
+point253 = -0.035584 0.001752 0.027490, , hip1r 
+point254 = -0.010355 0.031185 0.030746, , hip1r 
+point255 = -0.036882 -0.025782 0.000176, , hip1r 
+point256 = -0.042749 -0.011950 0.007397, , hip1r 
+point257 = 0.024687 0.026213 0.026989, , hip1r 
+point258 = -0.040587 -0.013816 0.013667, , hip1r 
+point259 = 0.020157 0.027404 0.029457, , hip1r 
+point260 = -0.001764 0.032812 0.030746, , hip1r 
+point261 = -0.032122 -0.005859 0.030965, , hip1r 
+point262 = 0.017140 -0.040743 0.008438, , hip1r 
+point263 = -0.008190 -0.040882 0.016929, , hip1r 
+point264 = -0.018864 -0.000097 0.040855, , hip1r 
+point265 = 0.012734 -0.010008 0.041984, , hip1r 
+point266 = 0.031042 -0.009932 0.031029, , hip1r 
+point267 = -0.038565 0.009296 0.021244, , hip1r 
+point268 = -0.007923 0.032912 0.029648, , hip1r 
+point269 = 0.039571 -0.019736 0.008347, , hip1r 
+point270 = -0.044548 0.001028 -0.006277, , hip1r 
+point271 = 0.032200 -0.031271 0.003206, , hip1r 
+point272 = 0.010009 0.042561 0.010648, , hip1r 
+point273 = 0.033711 0.029496 0.004307, , hip1r 
+point274 = 0.031784 0.031511 0.004672, , hip1r 
+point275 = -0.038398 -0.019293 0.013354, , hip1r 
+point276 = -0.043884 0.009413 0.003255, , hip1r 
+point277 = -0.026839 0.027165 0.023806, , hip1r 
+point278 = 0.001255 -0.043264 0.012314, , hip1r 
+point279 = -0.030763 0.008811 0.031639, , hip1r 
+point280 = -0.009310 -0.032835 0.029329, , hip1r 
+point281 = 0.008707 -0.004130 0.043956, , hip1r 
+point282 = 0.015661 -0.033029 0.026245, , hip1r 
+point283 = 0.024327 0.006221 0.037343, , hip1r 
+point284 = 0.037937 -0.008183 0.022777, , hip1r 
+point285 = 0.019814 -0.016822 0.036734, , hip1r 
+point286 = -0.028950 -0.034451 0.000234, , hip1r 
+point287 = 0.044606 0.003075 0.005083, , hip1r 
+point288 = 0.021044 -0.003028 0.039661, , hip1r 
+point289 = -0.033850 0.029643 0.000686, , hip1r 
+point290 = -0.024941 0.018202 0.032736, , hip1r 
+point291 = -0.022008 -0.001425 0.039225, , hip1r 
+point292 = -0.041750 -0.014040 0.009210, , hip1r 
+point293 = 0.043044 -0.011372 -0.006547, , hip1r 
+point294 = 0.027663 -0.035478 0.001014, , hip1r 
+point295 = -0.043081 0.006351 0.011344, , hip1r 
+point296 = 0.025753 -0.024858 0.027273, , hip1r 
+point297 = -0.025812 0.021387 0.030022, , hip1r 
+point298 = 0.037638 0.012011 0.021544, , hip1r 
+point299 = -0.012948 0.034307 0.026084, , hip1r 
+point300 = -0.019186 0.040634 -0.002399, , hip1r 
+point301 = -0.005298 0.001315 0.044668, , hip1r 
+point302 = -0.044265 0.003307 0.007392, , hip1r 
+point303 = -0.009716 -0.034862 0.026745, , hip1r 
+point304 = -0.023387 0.025768 0.028531, , hip1r 
+point305 = 0.040938 -0.015782 0.010003, , hip1r 
+point306 = -0.005103 0.044458 -0.004742, , hip1r 
+point307 = -0.001298 -0.044865 -0.003226, , hip1r 
+point308 = 0.037115 -0.023858 -0.008848, , hip1r 
+point309 = -0.015868 -0.009324 0.041064, , hip1r 
+point310 = 0.020062 -0.013359 0.038001, , hip1r 
+point311 = 0.041503 0.015440 -0.008005, , hip1r 
+point312 = -0.019087 -0.007108 0.040127, , hip1r 
+point313 = 0.044285 0.000824 0.007947, , hip1r 
+point314 = 0.025553 0.036679 -0.005164, , hip1r 
+point315 = -0.020988 0.013788 0.037342, , hip1r 
+point316 = 0.004663 0.044673 -0.002758, , hip1r 
+point317 = -0.009503 -0.002144 0.043933, , hip1r 
+point318 = -0.013731 0.033682 0.026495, , hip1r 
+point319 = -0.008097 -0.030447 0.032131, , hip1r 
+point320 = -0.037795 -0.023018 -0.008166, , hip1r 
+point321 = 0.003053 0.044891 -0.000716, , hip1r 
+point322 = 0.041359 0.017608 0.002096, , hip1r 
+point323 = 0.044845 0.000949 -0.003615, , hip1r 
+point324 = 0.016775 0.041657 0.002874, , hip1r 
+point325 = -0.044931 0.002486 -0.000172, , hip1r 
+point326 = -0.026407 -0.023718 0.027661, , hip1r 
+point327 = 0.032070 0.031186 0.004892, , hip1r 
+point328 = 0.029548 0.032692 0.009117, , hip1r 
+point329 = -0.013374 0.031348 0.029384, , hip1r 
+point330 = 0.030791 0.018964 0.026782, , hip1r 
+point331 = -0.037656 0.024300 -0.004066, , hip1r 
+point332 = -0.002500 0.012143 0.043258, , hip1r 
+point333 = -0.030265 -0.032470 0.007397, , hip1r 
+point334 = 0.005627 0.029255 0.033726, , hip1r 
+point335 = -0.025466 -0.037097 0.000496, , hip1r 
+point336 = 0.010559 0.028465 0.033215, , hip1r 
+point337 = 0.017678 0.011949 0.039619, , hip1r 
+point338 = 0.037896 -0.021345 0.011547, , hip1r 
+point339 = -0.020311 -0.007783 0.039394, , hip1r 
+point340 = -0.039075 0.022242 0.001851, , hip1r 
+point341 = 0.034472 0.028681 -0.003758, , hip1r 
+point342 = -0.033217 -0.011430 0.028124, , hip1r 
+point343 = 0.025811 0.021705 0.029794, , hip1r 
+point344 = 0.000503 0.005707 0.044634, , hip1r 
+point345 = 0.026494 0.031480 0.018223, , hip1r 
+point346 = -0.020870 0.038978 -0.008378, , hip1r 
+point347 = -0.025461 0.036745 0.005151, , hip1r 
+point348 = 0.031597 -0.015171 0.028221, , hip1r 
+point349 = 0.032998 -0.027891 0.012578, , hip1r 
+point350 = 0.011182 -0.043499 0.002789, , hip1r 
+point351 = 0.020072 0.010143 0.038977, , hip1r 
+point352 = -0.037531 0.020695 0.013716, , hip1r 
+point353 = -0.035818 0.027167 -0.002000, , hip1r 
+point354 = -0.037858 0.023059 0.007752, , hip1r 
+point355 = 0.031336 -0.005174 0.031880, , hip1r 
+point356 = 0.002764 0.036270 0.026493, , hip1r 
+point357 = 0.032778 0.026626 0.015546, , hip1r 
+point358 = 0.005488 -0.016881 0.041351, , hip1r 
+point359 = 0.037248 0.010774 0.022836, , hip1r 
+point360 = 0.030471 -0.007832 0.032174, , hip1r 
+point361 = 0.013065 -0.038840 0.018595, , hip1r 
+point362 = 0.043604 -0.011022 0.001472, , hip1r 
+point363 = 0.003723 -0.037499 0.024596, , hip1r 
+point364 = -0.032387 -0.026193 0.017029, , hip1r 
+point365 = 0.020775 -0.001433 0.039892, , hip1r 
+point366 = -0.041396 -0.017164 -0.004091, , hip1r 
+point367 = -0.029712 0.000768 0.033788, , hip1r 
+point368 = -0.000723 0.037824 0.024369, , hip1r 
+point369 = 0.014661 0.041506 0.009345, , hip1r 
+point370 = -0.044771 0.002045 0.004048, , hip1r 
+point371 = -0.006680 -0.026630 0.035654, , hip1r 
+point372 = 0.041514 -0.003236 0.017061, , hip1r 
+point373 = -0.022379 0.038048 -0.008748, , hip1r 
+point374 = 0.008290 0.043706 0.006789, , hip1r 
+point375 = -0.010878 0.015946 0.040649, , hip1r 
+point376 = 0.012011 0.007794 0.042661, , hip1r 
+point377 = -0.027786 -0.030192 0.018478, , hip1r 
+point378 = -0.028745 0.027615 0.020884, , hip1r 
+point379 = 0.031096 -0.026605 0.018713, , hip1r 
+point380 = -0.024124 0.012001 0.036042, , hip1r 
+point381 = 0.028670 -0.023484 0.025525, , hip1r 
+point382 = 0.007243 0.044340 -0.002559, , hip1r 
+point383 = 0.013003 -0.042812 0.004805, , hip1r 
+point384 = 0.024517 -0.030297 0.022494, , hip1r 
+point385 = -0.040201 0.019821 -0.003997, , hip1r 
+point386 = -0.017636 -0.011016 0.039907, , hip1r 
+point387 = 0.023500 0.015268 0.035208, , hip1r 
+point388 = -0.000163 0.044582 -0.006116, , hip1r 
+point389 = -0.017841 -0.011924 0.039554, , hip1r 
+point390 = -0.037719 -0.004905 0.024046, , hip1r 
+point391 = 0.029234 -0.017524 0.029382, , hip1r 
+point392 = -0.009551 -0.015761 0.041053, , hip1r 
+point393 = -0.028903 0.000063 0.034491, , hip1r 
+point394 = -0.025825 -0.029220 0.022456, , hip1r 
+point395 = 0.029335 0.017689 0.029182, , hip1r 
+point396 = 0.042986 0.011270 0.007085, , hip1r 
+point397 = 0.000310 -0.031581 0.032055, , hip1r 
+point398 = -0.019884 0.039790 -0.006812, , hip1r 
+point399 = 0.031826 0.014128 0.028505, , hip1r 
+point400 = 0.023153 -0.012118 0.036635, , hip1r 
+point401 = 0.039975 0.014211 0.015003, , hip1r 
+point402 = 0.040907 0.018608 0.002311, , hip1r 
+point403 = -0.035612 -0.017734 0.021031, , hip1r 
+point404 = -0.040955 0.016454 -0.008774, , hip1r 
+point405 = 0.038989 0.006772 0.021424, , hip1r 
+point406 = 0.033093 0.010684 0.028560, , hip1r 
+point407 = 0.002296 0.031868 0.031688, , hip1r 
+point408 = 0.030987 0.031897 -0.006885, , hip1r 
+point409 = -0.020923 -0.022373 0.032964, , hip1r 
+point410 = -0.037872 0.005654 0.023637, , hip1r 
+point411 = 0.023676 0.019586 0.032876, , hip1r 
+point412 = -0.030470 0.013088 0.030419, , hip1r 
+point413 = 0.031842 -0.022565 0.022404, , hip1r 
+point414 = -0.040395 -0.017732 -0.008878, , hip1r 
+point415 = -0.005436 -0.044473 -0.004196, , hip1r 
+point416 = 0.042025 -0.005052 0.015277, , hip1r 
+point417 = -0.036684 -0.022705 0.012798, , hip1r 
+point418 = -0.019137 -0.000380 0.040726, , hip1r 
+point419 = -0.041971 -0.008443 0.013862, , hip1r 
+point420 = -0.035226 -0.027783 -0.003501, , hip1r 
+point421 = 0.003622 -0.040158 0.019981, , hip1r 
+point422 = -0.030965 -0.022683 0.023487, , hip1r 
+point423 = -0.003739 -0.021491 0.039359, , hip1r 
+point424 = -0.040335 0.017390 0.009779, , hip1r 
+point425 = -0.026743 -0.035167 -0.008552, , hip1r 
+point426 = 0.019651 0.039605 0.008384, , hip1r 
+point427 = 0.028069 -0.027553 0.021862, , hip1r 
+point428 = -0.000467 0.043953 0.009641, , hip1r 
+point429 = -0.026682 0.033744 0.013208, , hip1r 
+point430 = -0.014719 0.042257 0.004767, , hip1r 
+point431 = 0.042888 -0.008809 0.010393, , hip1r 
+point432 = 0.014659 0.038642 0.017801, , hip1r 
+point433 = 0.036466 0.025754 -0.005654, , hip1r 
+point434 = -0.014971 -0.040612 0.012311, , hip1r 
+point435 = 0.036033 0.024828 0.010498, , hip1r 
+point436 = 0.013897 0.042215 0.007056, , hip1r 
+point437 = -0.035179 -0.028022 -0.001491, , hip1r 
+point438 = -0.009454 -0.036544 0.024498, , hip1r 
+point439 = 0.034398 -0.028265 0.006545, , hip1r 
+point440 = -0.033384 -0.025112 0.016730, , hip1r 
+point441 = 0.024129 -0.028268 0.025372, , hip1r 
+point442 = -0.017728 -0.035317 0.021528, , hip1r 
+point443 = 0.009665 -0.043240 0.007870, , hip1r 
+point444 = -0.030047 -0.007044 0.032750, , hip1r 
+point445 = 0.044290 0.001238 -0.007866, , hip1r 
+point446 = 0.014069 0.042047 -0.007686, , hip1r 
+point447 = -0.031601 0.012806 0.029366, , hip1r 
+point448 = -0.033804 -0.012966 0.026725, , hip1r 
+point449 = -0.033126 0.029156 -0.008808, , hip1r 
+point450 = -0.027125 -0.035826 0.002396, , hip1r 
+point451 = -0.038595 -0.023046 0.002074, , hip1r 
+point452 = 0.004473 -0.043442 0.010852, , hip1r 
+point453 = 0.020514 0.040034 0.001182, , hip1r 
+point454 = -0.039895 -0.000781 0.020803, , hip1r 
+point455 = -0.033316 0.030249 0.000147, , hip1r 
+point456 = 0.023605 -0.003405 0.038160, , hip1r 
+point457 = 0.038243 -0.016241 0.017284, , hip1r 
+point458 = 0.034811 -0.027804 0.006340, , hip1r 
+point459 = -0.030042 0.011131 0.031600, , hip1r 
+point460 = 0.000402 -0.041951 0.016277, , hip1r 
+point461 = 0.031870 -0.020393 0.024361, , hip1r 
+point462 = -0.031459 0.032131 0.001705, , hip1r 
+point463 = 0.032869 0.029455 0.008774, , hip1r 
+point464 = -0.043719 -0.006959 -0.008074, , hip1r 
+point465 = -0.024191 0.037531 -0.005588, , hip1r 
+point466 = 0.025030 -0.034725 0.013881, , hip1r 
+point467 = 0.007512 0.017735 0.040670, , hip1r 
+point468 = 0.009966 0.037583 0.022653, , hip1r 
+point469 = -0.027482 -0.005320 0.035234, , hip1r 
+point470 = 0.038092 0.022297 -0.008764, , hip1r 
+point471 = 0.002417 0.041636 0.016899, , hip1r 
+point472 = -0.029796 -0.033606 -0.002805, , hip1r 
+point473 = 0.033617 0.028196 0.009994, , hip1r 
+point474 = -0.031553 -0.025228 0.019822, , hip1r 
+point475 = 0.016079 -0.013343 0.039855, , hip1r 
+point476 = -0.044334 0.002598 -0.007262, , hip1r 
+point477 = -0.016902 0.040084 0.011514, , hip1r 
+point478 = 0.001998 -0.026138 0.036576, , hip1r 
+point479 = 0.036828 -0.010818 0.023488, , hip1r 
+point480 = -0.027335 -0.035647 -0.002655, , hip1r 
+point481 = -0.041921 0.003878 0.015893, , hip1r 
+point482 = -0.039051 0.015980 0.015641, , hip1r 
+point483 = 0.015466 0.036610 0.021108, , hip1r 
+point484 = -0.026408 0.009859 0.035078, , hip1r 
+point485 = -0.032006 0.002394 0.031542, , hip1r 
+point486 = 0.021788 -0.025959 0.029604, , hip1r 
+point487 = -0.008766 -0.040975 0.016406, , hip1r 
+point488 = -0.030926 -0.029163 0.014769, , hip1r 
+point489 = 0.032894 0.020810 0.022582, , hip1r 
+point490 = 0.034224 0.028956 -0.003907, , hip1r 
+point491 = -0.030954 -0.015916 0.028522, , hip1r 
+point492 = -0.042627 0.010473 0.009912, , hip1r 
+point493 = -0.032684 -0.009596 0.029406, , hip1r 
+point494 = 0.031492 0.007668 0.031216, , hip1r 
+point495 = -0.032475 -0.017664 0.025658, , hip1r 
+point496 = -0.030998 -0.032587 0.001480, , hip1r 
+point497 = -0.041827 0.004770 0.015898, , hip1r 
+point498 = 0.022941 0.036416 0.013137, , hip1r 
+point499 = 0.000856 -0.031094 0.032518, , hip1r 
+point500 = 0.005821 -0.020767 0.039495, , hip1r 
+point501 = -0.011265 0.042359 0.010189, , hip1r 
+point502 = -0.044246 -0.002117 -0.007927, , hip1r 
+point503 = 0.001624 0.021484 0.039507, , hip1r 
+point504 = 0.010030 0.026637 0.034855, , hip1r 
+point505 = 0.002428 -0.006282 0.044493, , hip1r 
+point506 = 0.041108 0.018305 -0.000268, , hip1r 
+point507 = 0.013608 0.038452 0.019008, , hip1r 
+point508 = 0.039952 -0.006384 0.019699, , hip1r 
+point509 = -0.039920 -0.020369 -0.004062, , hip1r 
+point510 = -0.033778 -0.019468 0.022474, , hip1r 
+point511 = 0.040140 -0.013036 0.015617, , hip1r 
+point512 = 0.035923 0.026113 0.007254, , hip1r 
+point513 = 0.013841 -0.013206 0.040731, , hip1r 
+point514 = 0.032186 -0.026136 0.017492, , hip1r 
+point515 = 0.009170 0.039887 0.018707, , hip1r 
+point516 = 0.022422 0.038997 -0.001218, , hip1r 
+point517 = -0.026369 -0.034495 0.011822, , hip1r 
+point518 = 0.009761 0.020860 0.038660, , hip1r 
+point519 = 0.032204 0.028954 0.012229, , hip1r 
+point520 = -0.017779 0.020081 0.036134, , hip1r 
+point521 = -0.031404 0.022108 0.023453, , hip1r 
+point522 = 0.035457 0.022442 0.016253, , hip1r 
+point523 = -0.018168 -0.041107 -0.002261, , hip1r 
+point524 = -0.042108 -0.012779 0.009412, , hip1r 
+point525 = 0.044758 -0.003959 0.002468, , hip1r 
+point526 = 0.005518 0.023146 0.038195, , hip1r 
+point527 = 0.036506 -0.020372 0.016651, , hip1r 
+point528 = -0.022795 -0.038634 -0.003572, , hip1r 
+point529 = -0.000912 -0.022240 0.039109, , hip1r 
+point530 = -0.031565 0.030223 0.010733, , hip1r 
+point531 = -0.019093 0.003052 0.040634, , hip1r 
+point532 = 0.030469 0.024023 0.022793, , hip1r 
+point533 = 0.033173 -0.029700 0.006518, , hip1r 
+point534 = -0.020155 0.007241 0.039577, , hip1r 
+point535 = -0.022108 -0.039175 0.001263, , hip1r 
+point536 = -0.005969 -0.043335 0.010558, , hip1r 
+point537 = -0.009964 0.043744 -0.003496, , hip1r 
+point538 = -0.036200 -0.024168 0.011422, , hip1r 
+point539 = -0.026728 0.028273 0.022611, , hip1r 
+point540 = 0.012407 -0.042076 0.010032, , hip1r 
+point541 = 0.036688 0.018270 0.018579, , hip1r 
+point542 = 0.020715 -0.000946 0.039937, , hip1r 
+point543 = 0.007121 -0.043154 0.010585, , hip1r 
+point544 = 0.044507 0.002063 -0.006314, , hip1r 
+point545 = 0.031159 -0.026126 0.019276, , hip1r 
+point546 = 0.028419 -0.032594 0.012449, , hip1r 
+point547 = -0.013925 -0.040750 0.013060, , hip1r 
+point548 = 0.023080 -0.020350 0.032836, , hip1r 
+point549 = -0.043086 0.009448 0.008905, , hip1r 
+point550 = -0.018160 0.018963 0.036546, , hip1r 
+point551 = 0.038917 0.022367 0.003190, , hip1r 
+point552 = 0.030047 -0.000525 0.033495, , hip1r 
+point553 = 0.018582 -0.019830 0.035867, , hip1r 
+point554 = 0.044623 0.000020 0.005809, , hip1r 
+point555 = -0.013825 -0.029369 0.031166, , hip1r 
+point556 = -0.015034 -0.022086 0.036211, , hip1r 
+point557 = -0.037061 0.022932 0.011208, , hip1r 
+point558 = -0.031822 0.004760 0.031460, , hip1r 
+point559 = -0.025051 0.021186 0.030799, , hip1r 
+point560 = -0.042970 0.013350 -0.000572, , hip1r 
+point561 = 0.037812 0.006418 0.023539, , hip1r 
+point562 = -0.019465 0.009874 0.039353, , hip1r 
+point563 = 0.022709 0.017800 0.034532, , hip1r 
+point564 = 0.035796 0.009940 0.025394, , hip1r 
+point565 = -0.042179 -0.015522 -0.002225, , hip1r 
+point566 = -0.033060 -0.027803 0.012612, , hip1r 
+point567 = -0.002283 -0.032480 0.031062, , hip1r 
+point568 = -0.001607 0.036943 0.025645, , hip1r 
+point569 = -0.006674 -0.044406 -0.002927, , hip1r 
+point570 = -0.010264 -0.043663 -0.003629, , hip1r 
+point571 = -0.039888 -0.000944 0.020811, , hip1r 
+point572 = 0.025870 -0.020654 0.030482, , hip1r 
+point573 = 0.007783 -0.041673 0.015094, , hip1r 
+point574 = -0.027841 0.000899 0.035342, , hip1r 
+point575 = 0.003249 -0.044860 -0.001424, , hip1r 
+point576 = -0.015512 -0.027016 0.032473, , hip1r 
+point577 = 0.026847 -0.003716 0.035922, , hip1r 
+point578 = 0.008382 0.007585 0.043557, , hip1r 
+point579 = 0.024226 -0.026019 0.027589, , hip1r 
+point580 = -0.038622 -0.017542 0.015021, , hip1r 
+point581 = 0.032772 0.030834 0.000475, , hip1r 
+point582 = 0.044193 -0.008336 0.001571, , hip1r 
+point583 = 0.005791 -0.009130 0.043682, , hip1r 
+point584 = 0.034623 0.014294 0.024939, , hip1r 
+point585 = -0.007203 0.040412 0.018439, , hip1r 
+point586 = -0.034055 0.021723 0.019833, , hip1r 
+point587 = -0.009828 -0.010054 0.042747, , hip1r 
+point588 = 0.037963 -0.021150 0.011682, , hip1r 
+point589 = -0.036892 0.021770 0.013786, , hip1r 
+point590 = -0.008270 -0.033518 0.028864, , hip1r 
+point591 = 0.038885 -0.007197 0.021474, , hip1r 
+point592 = -0.022688 0.009738 0.037622, , hip1r 
+point593 = -0.022795 -0.025982 0.028815, , hip1r 
+point594 = 0.036526 -0.025996 0.003886, , hip1r 
+point595 = 0.008965 -0.009358 0.043094, , hip1r 
+point596 = 0.020683 0.025888 0.030447, , hip1r 
+point597 = 0.013480 0.042022 -0.008798, , hip1r 
+point598 = -0.028905 -0.027462 0.020865, , hip1r 
+point599 = 0.004067 -0.025650 0.036750, , hip1r 
+point600 = 0.000900 0.044900 -0.002856, , hip1r 
+point601 = -0.008343 0.008946 0.043305, , hip1r 
+point602 = -0.012407 0.019255 0.038734, , hip1r 
+point603 = -0.030981 0.008708 0.031454, , hip1r 
+point604 = 0.021390 0.039391 0.003978, , hip1r 
+point605 = -0.001238 -0.044846 -0.003509, , hip1r 
+point606 = 0.025034 0.017707 0.032935, , hip1r 
+point607 = 0.034075 -0.028093 0.008642, , hip1r 
+point608 = 0.039139 0.022193 0.000786, , hip1r 
+point609 = 0.008769 -0.043694 -0.006242, , hip1r 
+point610 = 0.026115 -0.036580 -0.002213, , hip1r 
+point611 = -0.036423 0.011613 0.023738, , hip1r 
+point612 = -0.035225 -0.027439 -0.005596, , hip1r 
+point613 = -0.024156 0.031356 0.021408, , hip1r 
+point614 = 0.001525 -0.026655 0.036224, , hip1r 
+point615 = -0.029627 -0.018656 0.028270, , hip1r 
+point616 = -0.033810 -0.028536 0.008220, , hip1r 
+point617 = 0.024682 -0.037232 -0.005439, , hip1r 
+point618 = -0.042959 0.011901 -0.006159, , hip1r 
+point619 = 0.031994 -0.029006 0.012650, , hip1r 
+point620 = -0.044529 0.001799 -0.006239, , hip1r 
+point621 = -0.027638 -0.026901 0.023183, , hip1r 
+point622 = -0.012896 -0.005310 0.042784, , hip1r 
+point623 = -0.006075 -0.033754 0.029133, , hip1r 
+point624 = -0.011810 -0.003574 0.043275, , hip1r 
+point625 = 0.009655 -0.043920 -0.001684, , hip1r 
+point626 = -0.037234 0.013049 0.021642, , hip1r 
+point627 = 0.017557 -0.010849 0.039988, , hip1r 
+point628 = 0.021207 0.012829 0.037559, , hip1r 
+point629 = 0.031705 -0.000212 0.031934, , hip1r 
+point630 = -0.004302 -0.030336 0.032958, , hip1r 
+point631 = -0.041968 -0.016132 -0.001858, , hip1r 
+point632 = 0.027968 0.035055 0.003734, , hip1r 
+point633 = 0.019073 -0.031065 0.026385, , hip1r 
+point634 = -0.005875 -0.037467 0.024222, , hip1r 
+point635 = -0.037438 0.021392 0.012877, , hip1r 
+point636 = -0.006096 0.041575 0.016103, , hip1r 
+point637 = -0.014240 0.033074 0.026988, , hip1r 
+point638 = -0.039188 -0.022091 -0.001153, , hip1r 
+point639 = -0.012251 -0.030581 0.030655, , hip1r 
+point640 = 0.029302 -0.033717 -0.005433, , hip1r 
+point641 = 0.009275 0.036952 0.023949, , hip1r 
+point642 = -0.044223 -0.001877 0.008114, , hip1r 
+point643 = -0.029770 0.015157 0.030149, , hip1r 
+point644 = 0.000747 0.011534 0.043490, , hip1r 
+point645 = 0.002109 -0.044576 -0.005793, , hip1r 
+point646 = 0.010932 -0.040548 0.016166, , hip1r 
+point647 = -0.033271 0.029007 0.008757, , hip1r 
+point648 = -0.017963 0.039417 0.012193, , hip1r 
+point649 = -0.044458 0.005354 0.004453, , hip1r 
+point650 = -0.007889 0.043576 -0.007991, , hip1r 
+point651 = 0.024381 0.037390 0.005706, , hip1r 
+point652 = -0.035613 0.027478 -0.001295, , hip1r 
+point653 = -0.009761 0.043087 -0.008560, , hip1r 
+point654 = 0.001957 0.044780 0.003989, , hip1r 
+point655 = -0.015908 -0.019862 0.037114, , hip1r 
+point656 = 0.034412 -0.009548 0.027380, , hip1r 
+point657 = 0.004566 0.010800 0.043446, , hip1r 
+point658 = 0.037392 -0.023889 0.007494, , hip1r 
+point659 = -0.040402 -0.018623 -0.006773, , hip1r 
+point660 = 0.015514 0.041864 0.005631, , hip1r 
+point661 = -0.012675 -0.042862 0.005215, , hip1r 
+point662 = -0.015979 -0.022458 0.035571, , hip1r 
+point663 = -0.018143 0.032090 0.025808, , hip1r 
+point664 = -0.042385 -0.005779 0.013969, , hip1r 
+point665 = 0.039744 0.006234 0.020163, , hip1r 
+point666 = 0.044560 0.006277 -0.000021, , hip1r 
+point667 = 0.013505 -0.042915 0.000966, , hip1r 
+point668 = 0.027751 0.022322 0.027507, , hip1r 
+point669 = -0.015107 -0.037336 0.020069, , hip1r 
+point670 = 0.006917 -0.043624 0.008606, , hip1r 
+point671 = 0.011116 -0.041667 0.012858, , hip1r 
+point672 = -0.006173 -0.023714 0.037743, , hip1r 
+point673 = 0.009135 -0.003189 0.043947, , hip1r 
+point674 = -0.007047 0.022643 0.038244, , hip1r 
+point675 = 0.030645 -0.000805 0.032943, , hip1r 
+point676 = -0.037618 -0.013396 0.020747, , hip1r 
+point677 = -0.023374 -0.034904 0.016135, , hip1r 
+point678 = 0.041614 -0.014879 -0.008481, , hip1r 
+point679 = 0.007071 0.043997 0.006263, , hip1r 
+point680 = 0.043999 -0.005132 -0.007923, , hip1r 
+point681 = 0.007604 0.013961 0.042098, , hip1r 
+point682 = 0.040767 -0.015827 0.010609, , hip1r 
+point683 = 0.042858 -0.011881 -0.006861, , hip1r 
+point684 = 0.015050 0.029544 0.030424, , hip1r 
+point685 = 0.041992 0.014913 -0.006268, , hip1r 
+point686 = -0.005120 0.044553 -0.003721, , hip1r 
+point687 = -0.027706 -0.008240 0.034489, , hip1r 
+point688 = 0.007041 -0.044121 0.005367, , hip1r 
+point689 = -0.021924 -0.016734 0.035557, , hip1r 
+point690 = -0.008828 0.020020 0.039322, , hip1r 
+point691 = -0.032156 0.014312 0.028038, , hip1r 
+point692 = 0.020153 -0.030564 0.026167, , hip1r 
+point693 = -0.026961 -0.027348 0.023456, , hip1r 
+point694 = -0.004777 0.033496 0.029668, , hip1r 
+point695 = -0.035042 -0.003209 0.028049, , hip1r 
+point696 = 0.034054 -0.028753 0.006213, , hip1r 
+point697 = 0.020422 0.039646 -0.006011, , hip1r 
+point698 = 0.008568 -0.018187 0.040259, , hip1r 
+point699 = 0.014089 0.030532 0.029905, , hip1r 
+point700 = 0.035331 0.024753 0.012807, , hip1r 
+point701 = 0.044131 0.008797 0.000265, , hip1r 
+point702 = 0.044823 0.002870 0.002764, , hip1r 
+point703 = 0.041573 -0.008624 0.014909, , hip1r 
+point704 = 0.010015 -0.008495 0.043041, , hip1r 
+point705 = 0.041988 0.013551 0.008854, , hip1r 
+point706 = -0.021624 -0.039455 -0.000845, , hip1r 
+point707 = 0.017295 -0.002559 0.041465, , hip1r 
+point708 = 0.006884 0.036420 0.025519, , hip1r 
+point709 = 0.028121 0.016407 0.031065, , hip1r 
+point710 = -0.024932 0.030579 0.021640, , hip1r 
+point711 = -0.003675 -0.034653 0.028472, , hip1r 
+point712 = -0.035582 -0.026592 -0.007196, , hip1r 
+point713 = -0.023012 0.007259 0.037984, , hip1r 
+point714 = 0.025876 -0.015789 0.033258, , hip1r 
+point715 = 0.044874 0.000896 -0.003243, , hip1r 
+point716 = -0.043437 -0.002755 0.011428, , hip1r 
+point717 = 0.023624 0.030244 0.023499, , hip1r 
+point718 = -0.036874 -0.001078 0.025771, , hip1r 
+point719 = -0.039888 -0.018226 0.010085, , hip1r 
+point720 = -0.028004 -0.034806 0.005413, , hip1r 
+point721 = 0.011939 0.043039 0.005488, , hip1r 
+point722 = -0.023884 0.037538 -0.006741, , hip1r 
+point723 = -0.006894 0.013025 0.042518, , hip1r 
+point724 = -0.029416 -0.025922 0.022084, , hip1r 
+point725 = -0.005548 -0.003579 0.044513, , hip1r 
+point726 = -0.016902 -0.041114 0.006995, , hip1r 
+point727 = 0.022511 0.038862 0.002832, , hip1r 
+point728 = -0.024555 -0.034811 0.014499, , hip1r 
+point729 = 0.001234 -0.010493 0.043742, , hip1r 
+point730 = -0.004798 0.003685 0.044592, , hip1r 
+point731 = -0.035145 0.026817 -0.008404, , hip1r 
+point732 = -0.010440 -0.027431 0.034111, , hip1r 
+point733 = 0.003482 0.044862 0.000540, , hip1r 
+point734 = 0.035176 -0.011703 0.025509, , hip1r 
+point735 = 0.026485 0.030329 0.020092, , hip1r 
+point736 = -0.022291 -0.001616 0.039058, , hip1r 
+point737 = 0.043399 0.011560 0.002812, , hip1r 
+point738 = -0.015306 0.037012 0.020514, , hip1r 
+point739 = -0.015012 0.031003 0.028956, , hip1r 
+point740 = 0.035044 -0.011796 0.025646, , hip1r 
+point741 = 0.010810 0.039359 0.018948, , hip1r 
+point742 = -0.039326 0.002637 0.021714, , hip1r 
+point743 = -0.041754 0.015129 0.007264, , hip1r 
+point744 = 0.019024 -0.039875 0.008546, , hip1r 
+point745 = 0.005732 0.000632 0.044629, , hip1r 
+point746 = 0.004583 -0.018566 0.040735, , hip1r 
+point747 = -0.038934 -0.010203 0.020126, , hip1r 
+point748 = 0.043079 0.012655 0.003013, , hip1r 
+point749 = -0.044821 -0.003910 0.000895, , hip1r 
+point750 = -0.041135 0.014628 0.010905, , hip1r 
+point751 = -0.037162 0.002018 0.025297, , hip1r 
+point752 = -0.024088 -0.037898 -0.002925, , hip1r 
+point753 = -0.032167 -0.001086 0.031450, , hip1r 
+point754 = -0.000898 -0.017544 0.041430, , hip1r 
+point755 = 0.041884 -0.015422 0.005734, , hip1r 
+point756 = 0.013680 -0.042719 0.003593, , hip1r 
+point757 = -0.041472 0.017109 -0.003510, , hip1r 
+point758 = 0.037826 0.024110 0.003591, , hip1r 
+point759 = 0.040753 -0.018072 -0.006132, , hip1r 
+point760 = -0.030345 0.029084 0.016070, , hip1r 
+point761 = 0.002492 -0.044409 -0.006828, , hip1r 
+point762 = 0.014695 -0.041808 -0.007822, , hip1r 
+point763 = 0.013952 -0.039343 0.016807, , hip1r 
+point764 = -0.037088 -0.025476 -0.000649, , hip1r 
+point765 = -0.020365 0.039976 -0.003493, , hip1r 
+point766 = -0.000464 -0.044686 -0.005286, , hip1r 
+point767 = -0.039729 0.005916 0.020287, , hip1r 
+point768 = -0.044607 -0.004384 0.004005, , hip1r 
+point769 = -0.044290 0.005568 -0.005695, , hip1r 
+point770 = -0.039954 0.020669 0.001222, , hip1r 
+point771 = 0.020036 0.039951 -0.005241, , hip1r 
+point772 = -0.007608 0.039138 0.020864, , hip1r 
+point773 = 0.032349 -0.031281 -0.000030, , hip1r 
+point774 = 0.031043 -0.031493 -0.008340, , hip1r 
+point775 = -0.037310 0.002445 0.025039, , hip1r 
+point776 = -0.021430 -0.016901 0.035779, , hip1r 
+point777 = -0.009073 -0.044072 0.000549, , hip1r 
+point778 = 0.027398 0.033128 0.013299, , hip1r 
+point779 = -0.038546 -0.022164 -0.006927, , hip1r 
+point780 = 0.013882 0.038559 0.018587, , hip1r 
+point781 = 0.029796 0.012526 0.031310, , hip1r 
+point782 = 0.040697 0.017279 0.008376, , hip1r 
+point783 = 0.041627 -0.016522 -0.004383, , hip1r 
+point784 = -0.043109 -0.005497 0.011678, , hip1r 
+point785 = 0.020877 0.028779 0.027585, , hip1r 
+point786 = -0.024813 -0.032659 0.018512, , hip1r 
+point787 = -0.033443 -0.019434 0.022997, , hip1r 
+point788 = -0.007513 0.018192 0.040467, , hip1r 
+point789 = -0.020239 -0.038020 0.013034, , hip1r 
+point790 = -0.035856 0.027078 -0.002467, , hip1r 
+point791 = 0.008068 0.041608 0.015121, , hip1r 
+point792 = 0.001992 0.034496 0.028829, , hip1r 
+point793 = -0.033912 0.029380 -0.003438, , hip1r 
+point794 = 0.043958 0.009392 0.002107, , hip1r 
+point795 = -0.025634 0.036855 0.003106, , hip1r 
+point796 = -0.040896 -0.013870 0.012656, , hip1r 
+point797 = -0.039628 -0.015242 0.014910, , hip1r 
+point798 = 0.031562 0.014088 0.028816, , hip1r 
+point799 = -0.036793 -0.020815 0.015427, , hip1r 
+point800 = -0.043671 0.006676 -0.008559, , hip1r 
+point801 = -0.021463 -0.034746 0.018896, , hip1r 
+point802 = 0.009957 -0.043145 0.008022, , hip1r 
+point803 = 0.014996 0.037896 0.019079, , hip1r 
+point804 = 0.043453 -0.010719 0.004688, , hip1r 
+point805 = -0.029229 -0.006545 0.033583, , hip1r 
+point806 = 0.027542 -0.016401 0.031582, , hip1r 
+point807 = -0.012897 -0.016771 0.039717, , hip1r 
+point808 = 0.025362 0.036558 0.006732, , hip1r 
+point809 = 0.042587 0.014486 -0.001210, , hip1r 
+point810 = 0.044736 0.004243 0.002392, , hip1r 
+point811 = 0.014792 0.042217 0.004887, , hip1r 
+point812 = -0.021490 -0.003780 0.039356, , hip1r 
+point813 = 0.025012 0.033388 0.016873, , hip1r 
+point814 = 0.040327 0.019955 -0.000718, , hip1r 
+point815 = -0.042352 -0.015199 -0.000555, , hip1r 
+point816 = 0.037419 -0.004421 0.024602, , hip1r 
+point817 = 0.017316 0.028402 0.030307, , hip1r 
+point818 = 0.013141 0.019761 0.038234, , hip1r 
+point819 = 0.022890 0.037977 0.007667, , hip1r 
+point820 = 0.037364 0.020081 0.015023, , hip1r 
+point821 = -0.001263 -0.006275 0.044542, , hip1r 
+point822 = -0.036752 0.012903 0.022534, , hip1r 
+point823 = -0.039566 -0.002519 0.021288, , hip1r 
+point824 = -0.035471 -0.027565 0.002645, , hip1r 
+point825 = 0.033392 -0.030166 0.000180, , hip1r 
+point826 = 0.031012 0.029833 0.013161, , hip1r 
+point827 = -0.006289 0.024332 0.037328, , hip1r 
+point828 = 0.039829 0.016451 0.012961, , hip1r 
+point829 = 0.027676 0.035008 0.005786, , hip1r 
+point830 = 0.035798 0.016289 0.021867, , hip1r 
+point831 = 0.011866 0.027461 0.033617, , hip1r 
+point832 = 0.003856 -0.032704 0.030669, , hip1r 
+point833 = 0.035347 -0.026478 -0.008632, , hip1r 
+point834 = -0.040505 -0.004671 0.019039, , hip1r 
+point835 = 0.025207 -0.037276 0.000301, , hip1r 
+point836 = 0.005756 0.042866 0.012425, , hip1r 
+point837 = -0.040512 0.019572 0.000837, , hip1r 
+point838 = -0.030121 0.032774 -0.006600, , hip1r 
+point839 = -0.014599 -0.041404 0.009880, , hip1r 
+point840 = 0.040972 -0.014931 0.011107, , hip1r 
+point841 = 0.008789 0.042965 0.010086, , hip1r 
+point842 = 0.000322 -0.017047 0.041645, , hip1r 
+point843 = -0.044296 -0.005550 -0.005663, , hip1r 
+point844 = 0.002838 -0.044771 -0.003531, , hip1r 
+point845 = 0.032513 -0.030199 0.007478, , hip1r 
+point846 = 0.002754 0.034929 0.028238, , hip1r 
+point847 = 0.033825 -0.013467 0.026449, , hip1r 
+point848 = 0.018529 0.003192 0.040884, , hip1r 
+point849 = -0.038619 -0.015717 0.016929, , hip1r 
+point850 = 0.033469 -0.027528 0.012126, , hip1r 
+point851 = 0.022238 0.038699 0.005733, , hip1r 
+point852 = -0.000534 0.000271 0.044996, , hip1r 
+point853 = -0.012646 0.024106 0.035833, , hip1r 
+point854 = -0.036738 -0.016613 0.019982, , hip1r 
+point855 = 0.017257 -0.032848 0.025460, , hip1r 
+point856 = -0.034617 0.028027 -0.006412, , hip1r 
+point857 = -0.032311 -0.030862 -0.005338, , hip1r 
+point858 = 0.043431 -0.009664 -0.006736, , hip1r 
+point859 = 0.014036 -0.026122 0.033847, , hip1r 
+point860 = 0.010276 -0.024417 0.036376, , hip1r 
+point861 = 0.041036 -0.011896 0.014125, , hip1r 
+point862 = 0.017578 0.039338 0.012982, , hip1r 
+point863 = -0.021289 -0.038972 0.007275, , hip1r 
+point864 = -0.003148 -0.034693 0.028486, , hip1r 
+point865 = 0.016181 -0.034640 0.023732, , hip1r 
+point866 = -0.015179 -0.032801 0.026808, , hip1r 
+point867 = -0.011594 0.021071 0.038034, , hip1r 
+point868 = 0.019538 0.004328 0.040305, , hip1r 
+point869 = 0.030800 0.028992 0.015357, , hip1r 
+point870 = -0.007433 0.034562 0.027842, , hip1r 
+point871 = 0.023252 -0.037553 -0.008608, , hip1r 
+point872 = 0.036310 -0.025912 0.005927, , hip1r 
+point873 = -0.040636 0.013218 0.014107, , hip1r 
+point874 = 0.044446 -0.003207 0.006270, , hip1r 
+point875 = 0.043335 0.009341 -0.007734, , hip1r 
+point876 = 0.024938 -0.030358 0.021943, , hip1r 
+point877 = -0.044075 -0.007994 -0.004303, , hip1r 
+point878 = 0.044335 -0.006891 -0.003455, , hip1r 
+point879 = 0.032261 -0.031372 -0.000102, , hip1r 
+point880 = 0.007955 0.012771 0.042410, , hip1r 
+point881 = -0.022384 0.029473 0.025599, , hip1r 
+point882 = 0.032126 0.012256 0.029029, , hip1r 
+point883 = -0.040966 0.015006 0.011027, , hip1r 
+point884 = -0.022984 0.008918 0.037646, , hip1r 
+point885 = -0.017403 0.033272 0.024802, , hip1r 
+point886 = 0.038619 -0.023037 -0.001698, , hip1r 
+point887 = -0.032132 0.001099 0.031485, , hip1r 
+point888 = -0.002934 -0.011500 0.043407, , hip1r 
+point889 = -0.022533 -0.037905 -0.008970, , hip1r 
+point890 = 0.021274 -0.037691 0.012322, , hip1r 
+point891 = -0.001606 0.031786 0.031813, , hip1r 
+point892 = 0.004778 -0.039330 0.021337, , hip1r 
+point893 = -0.037815 0.023809 0.005305, , hip1r 
+point894 = 0.039902 0.014552 0.014869, , hip1r 
+point895 = 0.027242 -0.028774 0.021330, , hip1r 
+point896 = 0.042602 -0.007490 0.012409, , hip1r 
+point897 = 0.020773 0.018778 0.035226, , hip1r 
+point898 = -0.044919 -0.002348 0.001326, , hip1r 
+point899 = 0.001573 -0.044966 0.000771, , hip1r 
+point900 = 0.031543 0.026091 0.018689, , hip1r 
+point901 = 0.043791 0.009461 0.004227, , hip1r 
+point902 = -0.035968 0.013955 0.023164, , hip1r 
+point903 = 0.030591 0.032487 0.005813, , hip1r 
+point904 = 0.025650 -0.004626 0.036684, , hip1r 
+point905 = 0.038557 -0.015223 0.017510, , hip1r 
+point906 = 0.040269 -0.017994 0.008926, , hip1r 
+point907 = 0.025819 -0.002644 0.036761, , hip1r 
+point908 = -0.005999 -0.016039 0.041614, , hip1r 
+point909 = -0.010636 -0.034552 0.026796, , hip1r 
+point910 = -0.027512 0.028818 0.020919, , hip1r 
+point911 = 0.041228 0.017566 0.004087, , hip1r 
+point912 = -0.022670 0.008412 0.037951, , hip1r 
+point913 = -0.043223 -0.011967 -0.003682, , hip1r 
+point914 = -0.029519 -0.007611 0.033102, , hip1r 
+point915 = 0.008522 -0.036732 0.024558, , hip1r 
+point916 = -0.031475 -0.023297 0.022171, , hip1r 
+point917 = 0.041930 -0.014499 -0.007525, , hip1r 
+point918 = -0.018827 -0.020359 0.035441, , hip1r 
+point919 = 0.032521 -0.030990 -0.002643, , hip1r 
+point920 = 0.030374 0.029503 0.015232, , hip1r 
+point921 = 0.013805 -0.032718 0.027639, , hip1r 
+point922 = 0.044413 -0.006291 -0.003592, , hip1r 
+point923 = 0.004957 0.041870 0.015726, , hip1r 
+point924 = 0.034401 -0.021011 0.020004, , hip1r 
+point925 = -0.020075 -0.040251 0.001369, , hip1r 
+point926 = -0.005783 -0.036613 0.025516, , hip1r 
+point927 = -0.017424 -0.040818 -0.007434, , hip1r 
+point928 = 0.012276 -0.040611 0.015002, , hip1r 
+point929 = -0.044094 -0.008304 0.003430, , hip1r 
+point930 = 0.001289 -0.044214 0.008273, , hip1r 
+point931 = -0.029564 -0.000660 0.033919, , hip1r 
+point932 = 0.037540 -0.024815 -0.000070, , hip1r 
+point933 = 0.032073 0.031517 -0.001735, , hip1r 
+point934 = 0.008403 -0.011232 0.042758, , hip1r 
+point935 = 0.019699 0.038690 0.011834, , hip1r 
+point936 = 0.002962 -0.033190 0.030243, , hip1r 
+point937 = -0.043303 0.011312 0.004678, , hip1r 
+point938 = -0.032189 -0.025315 0.018655, , hip1r 
+point939 = -0.029519 0.033893 0.002212, , hip1r 
+point940 = -0.034110 0.024151 0.016679, , hip1r 
+point941 = -0.005389 -0.042823 0.012734, , hip1r 
+point942 = 0.029263 -0.008476 0.033118, , hip1r 
+point943 = 0.026914 -0.025659 0.025343, , hip1r 
+point944 = -0.026583 -0.021916 0.028949, , hip1r 
+point945 = 0.044070 -0.009050 -0.000987, , hip1r 
+point946 = -0.029514 -0.033113 -0.007579, , hip1r 
+point947 = 0.007424 -0.042914 0.011324, , hip1r 
+point948 = 0.036065 -0.026724 -0.003183, , hip1r 
+point949 = 0.006498 0.043810 -0.007969, , hip1r 
+point950 = 0.035278 0.026062 0.010063, , hip1r 
+point951 = 0.021228 -0.039635 0.001864, , hip1r 
+point952 = -0.034331 0.017637 0.023137, , hip1r 
+point953 = -0.005853 -0.040392 0.018952, , hip1r 
+point954 = 0.015934 -0.006688 0.041550, , hip1r 
+point955 = -0.012961 0.043062 0.001642, , hip1r 
+point956 = -0.013980 0.033932 0.026042, , hip1r 
+point957 = -0.042816 -0.013822 -0.000861, , hip1r 
+point958 = -0.041790 -0.014332 -0.008558, , hip1r 
+point959 = -0.025968 -0.031551 0.018847, , hip1r 
+point960 = -0.030303 -0.021056 0.025756, , hip1r 
+point961 = 0.008467 0.013562 0.042064, , hip1r 
+point962 = -0.038961 0.022091 -0.004360, , hip1r 
+point963 = -0.030244 0.032592 0.006932, , hip1r 
+point964 = 0.034684 0.019143 0.021343, , hip1r 
+point965 = 0.003816 0.044243 -0.007278, , hip1r 
+point966 = 0.044582 -0.001586 0.005914, , hip1r 
+point967 = 0.037029 -0.023727 0.009533, , hip1r 
+point968 = 0.010540 -0.040224 0.017202, , hip1r 
+point969 = 0.029687 0.033736 -0.002361, , hip1r 
+point970 = -0.015957 -0.005222 0.041751, , hip1r 
+point971 = 0.038239 0.013452 0.019540, , hip1r 
+point972 = -0.015613 -0.031396 0.028205, , hip1r 
+point973 = 0.012682 -0.025978 0.034487, , hip1r 
+point974 = 0.021936 -0.013652 0.036843, , hip1r 
+point975 = 0.026995 0.035816 -0.003677, , hip1r 
+point976 = -0.006128 0.017067 0.041184, , hip1r 
+point977 = 0.008301 -0.043709 -0.006753, , hip1r 
+point978 = -0.044276 0.003561 0.007206, , hip1r 
+point979 = -0.007252 -0.002315 0.044351, , hip1r 
+point980 = 0.003507 -0.003369 0.044736, , hip1r 
+point981 = 0.044865 -0.003307 -0.001078, , hip1r 
+point982 = 0.040134 0.004853 0.019766, , hip1r 
+point983 = -0.026752 0.036184 -0.000183, , hip1r 
+point984 = -0.029781 -0.006587 0.033086, , hip1r 
+point985 = -0.000617 -0.044971 0.001478, , hip1r 
+point986 = 0.031494 -0.006005 0.031577, , hip1r 
+point987 = -0.014904 -0.041515 -0.008907, , hip1r 
+point988 = -0.006504 0.044168 -0.005646, , hip1r 
+point989 = 0.040413 -0.012812 0.015086, , hip1r 
+point990 = 0.037467 -0.024554 -0.004286, , hip1r 
+point991 = -0.042159 0.011555 0.010684, , hip1r 
+point992 = -0.004740 -0.044657 0.002875, , hip1r 
+point993 = -0.039820 -0.015259 0.014370, , hip1r 
+point994 = 0.028697 -0.001101 0.034645, , hip1r 
+point995 = -0.034414 0.028726 -0.003937, , hip1r 
+point996 = 0.030613 -0.028144 0.017198, , hip1r 
+point997 = 0.034552 -0.027408 -0.008945, , hip1r 
+point998 = -0.028409 0.024730 0.024624, , hip1r 
+point999 = -0.004165 -0.029334 0.033870, , hip1r 
+point1000 = 0.038094 -0.023295 0.005583, , hip1r 
+point1001 = 0 0 -0.034, , 0.03
+point1002 = 0 0 -0.036, , 0.03
+point1003 = 0 0 -0.038, , 0.03
+point1004 = 0 0 -0.04, , 0.03
+point1005 = 0 0 -0.042, , 0.03
+point1006 = 0 0 -0.044, , 0.03
+point1007 = 0 0 -0.046, , 0.03
+point1008 = 0 0 -0.048, , 0.03
+point1009 = 0 0 -0.05, , 0.03
+point1010 = 0 0 -0.052, , 0.03
+point1011 = 0 0 -0.054, , 0.03
+point1012 = 0 0 -0.056, , 0.03
+point1013 = 0 0 -0.058, , 0.03
+point1014 = 0 0 -0.06, , 0.03
+point1015 = 0 0 -0.062, , 0.03
+point1016 = 0 0 -0.064, , 0.03
+point1017 = 0 0 -0.066, , 0.03
+point1018 = 0 0 -0.068, , 0.03
+point1019 = 0 0 -0.07, , 0.03
+point1020 = 0 0 -0.072, , 0.03
+point1021 = 0 0 -0.074, , 0.03
+point1022 = 0 0 -0.076, , 0.03
+point1023 = 0 0 -0.078, , 0.03
+point1024 = 0 0 -0.08, , 0.03
+point1025 = 0 0 -0.082, , 0.03
+point1026 = 0 0 -0.084, , 0.03
+point1027 = 0 0 -0.086, , 0.03
+point1028 = 0 0 -0.088, , 0.03
+point1029 = 0 0 -0.09, , 0.03
+point1030 = 0 0 -0.092, , 0.03
+point1031 = 0 0 -0.094, , 0.03
+point1032 = 0 0 -0.096, , 0.03
+point1033 = 0 0 -0.098, , 0.03
+point1034 = 0 0 -0.1, , 0.03
+point1035 = 0 0 -0.102, , 0.03
+point1036 = 0 0 -0.104, , 0.03
+point1037 = 0 0 -0.106, , 0.03
+point1038 = 0 0 -0.108, , 0.03
+point1039 = 0 0 -0.11, , 0.03
+point1040 = 0 0 -0.112, , 0.03
+point1041 = 0 0 -0.114, , 0.03
+point1042 = 0 0 -0.116, , 0.03
+point1043 = 0 0 -0.118, , 0.03
+point1044 = 0 0 -0.12, , 0.03
+point1045 = 0 0 -0.122, , 0.03
+point1046 = 0 0 -0.124, , 0.03
+point1047 = 0 0 -0.126, , 0.03
+point1048 = 0 0 -0.128, , 0.03
+point1049 = 0 0 -0.13, , 0.03
+point1050 = 0 0 -0.132, , 0.03
+point1051 = 0 0 -0.134, , 0.03
+point1052 = 0 0 -0.136, , 0.03
+point1053 = 0 0 -0.138, , 0.03
+point1054 = 0 0 -0.14, , 0.03
+point1055 = 0 0 -0.142, , 0.03
+point1056 = 0 0 -0.144, , 0.03
+point1057 = 0 0 -0.146, , 0.03
+point1058 = 0 0 -0.148, , 0.03
+point1059 = 0 0 -0.15, , 0.03
+point1060 = 0 0 -0.152, , 0.03
+point1061 = 0 0 -0.154, , 0.03
+point1062 = 0 0 -0.156, , 0.03
+point1063 = 0 0 -0.158, , 0.03
+point1064 = 0 0 -0.16, , 0.03
+point1065 = 0 0 -0.162, , 0.03
+point1066 = 0 0 -0.164, , 0.03
+point1067 = 0 0 -0.166, , 0.03
+point1068 = 0 0 -0.168, , 0.03
+point1069 = 0 0 -0.17, , 0.03
+point1070 = 0 0 -0.19, , 0.05
+
+
+
+
+
+
+
+    % upright
+    orientation = none
+
+    % offset a tiny bit so that the confinement does not make a solving error
+    position = 0 0 -0.399     
+
+    
+}
+
+
+
+new 0	 fiber actin
+{
+
+    length = 1
+    end_state = 1, 4
+    position = 0 0 -0.05
+
+}
+
+
+new 30 single mother_filament_maker
+{
+
+   position = disc  0.12 0 at 0 0 -0.399
+
+}
+
+
+new 200 couple arp2
+{
+   
+    position = circle 0.0825 0.075 at 0 0 -0.399
+    
+}
+
+% for 1 micron cubed volume, should be 5 micromolar
+
+% new 3010 couple fimbrin
+% {
+
+% }
+
+
+
+
+run simul *
+{   
+    nb_frames = 150
+    nb_steps = 300000 % 15 s
+    % nb_steps = 100000 % 5 s
+
+}
